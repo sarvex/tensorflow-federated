@@ -66,7 +66,7 @@ class FederatedComputationContext(symbol_binding_context.SymbolBindingContext):
     name_count = 0
     while name in ancestor_names:
       name_count = name_count + 1
-      name = '{}_{}'.format(suggested_name, name_count)
+      name = f'{suggested_name}_{name_count}'
     self._context_stack = context_stack
     self._parent = parent
     self._name = name
@@ -89,8 +89,7 @@ class FederatedComputationContext(symbol_binding_context.SymbolBindingContext):
         name=self._name, val=self._next_symbol_val)
     self._next_symbol_val += 1
     self._symbol_bindings.append((name, comp))
-    ref = building_blocks.Reference(name, comp.type_signature)
-    return ref
+    return building_blocks.Reference(name, comp.type_signature)
 
   @property
   def symbol_bindings(
@@ -109,15 +108,15 @@ class FederatedComputationContext(symbol_binding_context.SymbolBindingContext):
     if arg is not None:
       if tys.parameter is None:
         raise ValueError(
-            'A computation of type {} does not expect any arguments, but got '
-            'an argument {}.'.format(tys, arg))
+            f'A computation of type {tys} does not expect any arguments, but got an argument {arg}.'
+        )
       type_analysis.check_type(arg, tys.parameter)
       ret_val = fn(arg)
-    else:
-      if tys.parameter is not None:
-        raise ValueError(
-            'A computation of type {} expects an argument of type {}, but got '
-            ' no argument.'.format(tys, tys.parameter))
+    elif tys.parameter is None:
       ret_val = fn()
+    else:
+      raise ValueError(
+          f'A computation of type {tys} expects an argument of type {tys.parameter}, but got  no argument.'
+      )
     type_analysis.check_type(ret_val, tys.result)
     return ret_val

@@ -470,9 +470,10 @@ class RemoteExecutorBindingsTest(test_case.TestCase):
 
   def test_insecure_channel_construction(self):
     remote_ex = executor_bindings.create_remote_executor(
-        executor_bindings.create_insecure_grpc_channel('localhost:{}'.format(
-            portpicker.pick_unused_port())),
-        cardinalities={placements.CLIENTS: 10})
+        executor_bindings.create_insecure_grpc_channel(
+            f'localhost:{portpicker.pick_unused_port()}'),
+        cardinalities={placements.CLIENTS: 10},
+    )
     self.assertIsInstance(remote_ex, executor_bindings.Executor)
 
 

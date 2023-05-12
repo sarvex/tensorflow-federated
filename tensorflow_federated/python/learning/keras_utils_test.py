@@ -64,15 +64,23 @@ def _create_whimsy_types(feature_dims):
 def _create_tff_model_from_keras_model_tuples():
   tuples = []
   for n_dims in [1, 3]:
-    for name, model_fn in [
-        ('functional',
-         model_examples.build_linear_regression_keras_functional_model),
-        ('sequential',
-         model_examples.build_linear_regression_keras_sequential_model),
-        ('sequential_regularized', model_examples
-         .build_linear_regression_regularized_keras_sequential_model)
-    ]:
-      tuples.append(('{}_model_{}_dims'.format(name, n_dims), n_dims, model_fn))
+    tuples.extend(
+        (f'{name}_model_{n_dims}_dims', n_dims, model_fn)
+        for name, model_fn in [
+            (
+                'functional',
+                model_examples.build_linear_regression_keras_functional_model,
+            ),
+            (
+                'sequential',
+                model_examples.build_linear_regression_keras_sequential_model,
+            ),
+            (
+                'sequential_regularized',
+                model_examples.
+                build_linear_regression_regularized_keras_sequential_model,
+            ),
+        ])
   return tuples
 
 
@@ -97,7 +105,7 @@ class KerasUtilsTest(test_case.TestCase, parameterized.TestCase):
 
   def assertIsSubClass(self, cls1, cls2):
     if not issubclass(cls1, cls2):
-      raise AssertionError('{} is not a subclass of {}'.format(cls1, cls2))
+      raise AssertionError(f'{cls1} is not a subclass of {cls2}')
 
   def test_convert_fails_on_non_keras_model(self):
     with self.assertRaisesRegex(TypeError, r'keras\..*\.Model'):

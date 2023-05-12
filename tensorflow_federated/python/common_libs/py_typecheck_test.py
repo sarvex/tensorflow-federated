@@ -32,8 +32,9 @@ class PyTypeCheckTest(parameterized.TestCase):
       py_typecheck.check_type(10, (str, int))
       py_typecheck.check_type(10, (str, int, bool, float))
     except TypeError:
-      self.fail('Function {} raised TypeError unexpectedly.'.format(
-          py_typecheck.check_type.__name__))
+      self.fail(
+          f'Function {py_typecheck.check_type.__name__} raised TypeError unexpectedly.'
+      )
     self.assertRaisesRegex(TypeError, 'Expected .*TestCase, found int.',
                            py_typecheck.check_type, 10, parameterized.TestCase)
     self.assertRaisesRegex(
@@ -77,8 +78,9 @@ class PyTypeCheckTest(parameterized.TestCase):
       f = lambda x: x + 10
       self.assertEqual(py_typecheck.check_callable(f), f)
     except TypeError:
-      self.fail('Function {} raised TypeError unexpectedly.'.format(
-          py_typecheck.check_callable.__name__))
+      self.fail(
+          f'Function {py_typecheck.check_callable.__name__} raised TypeError unexpectedly.'
+      )
     self.assertRaisesRegex(TypeError,
                            'Expected a callable, found non-callable int.',
                            py_typecheck.check_callable, 10)

@@ -165,8 +165,8 @@ class EncodedSumFactoryExecutionTest(test_case.TestCase):
     state = process.initialize()
     output = process.next(state, single_client_data)
     # Both tensors are quantized to their min and max, independently.
-    self.assertSetEqual(set([0.0, 2.0]), set(output.result[0]))
-    self.assertSetEqual(set([1.0, 5.0]), set(output.result[1]))
+    self.assertSetEqual({0.0, 2.0}, set(output.result[0]))
+    self.assertSetEqual({1.0, 5.0}, set(output.result[1]))
 
   def test_quantize_above_threshold_positive(self):
     encoded_f = encoded.EncodedSumFactory.quantize_above_threshold(
@@ -181,7 +181,7 @@ class EncodedSumFactoryExecutionTest(test_case.TestCase):
     # The first tensor is not quantized.
     self.assertAllClose([0.0, 1.0, 2.0], output.result[0])
     # The second tensor is quantized to its min and max.
-    self.assertSetEqual(set([1.0, 5.0]), set(output.result[1]))
+    self.assertSetEqual({1.0, 5.0}, set(output.result[1]))
 
   def test_quantize_above_threshold(self):
     encoded_f = encoded.EncodedSumFactory.quantize_above_threshold(

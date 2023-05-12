@@ -55,7 +55,7 @@ def count_tensorflow_ops_in(comp):
   graph_def = serialization_utils.unpack_graph_def(
       comp.proto.tensorflow.graph_def)
   return len(graph_def.node) + sum(
-      [len(graph_func.node_def) for graph_func in graph_def.library.function])
+      len(graph_func.node_def) for graph_func in graph_def.library.function)
 
 
 def count_tensorflow_variables_in(comp):

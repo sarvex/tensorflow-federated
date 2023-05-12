@@ -200,19 +200,15 @@ def trace(fn=None, **trace_kwargs):
       try:
         result = await fn(*fn_args, **fn_kwargs)
         completed = True
-        try:
+        with contextlib.suppress(StopIteration):
           span_gen.send(TracedFunctionReturned(result))
-        except StopIteration:
-          pass
         return result
       except:
         if not completed:
           error_type, error_value, traceback = sys.exc_info()
-          try:
+          with contextlib.suppress(StopIteration):
             span_gen.send(
                 TracedFunctionThrew(error_type, error_value, traceback))
-          except StopIteration:
-            pass
         raise
 
     return async_trace
@@ -227,19 +223,15 @@ def trace(fn=None, **trace_kwargs):
       try:
         result = fn(*fn_args, **fn_kwargs)
         completed = True
-        try:
+        with contextlib.suppress(StopIteration):
           span_gen.send(TracedFunctionReturned(result))
-        except StopIteration:
-          pass
         return result
       except:
         if not completed:
           error_type, error_value, traceback = sys.exc_info()
-          try:
+          with contextlib.suppress(StopIteration):
             span_gen.send(
                 TracedFunctionThrew(error_type, error_value, traceback))
-          except StopIteration:
-            pass
         raise
 
     return sync_trace
@@ -336,10 +328,8 @@ def span(scope, sub_scope, **trace_opts):
   span_gen = _span_generator(scope, sub_scope, trace_opts)
   next(span_gen)
   yield
-  try:
+  with contextlib.suppress(StopIteration):
     span_gen.send(TracedSpan())
-  except StopIteration:
-    pass
 
 
 def _span_generator(scope,
@@ -368,10 +358,8 @@ def _span_generator(scope,
   # Send the result of the function to all of the generators so that they can
   # complete.
   for span_gen in reversed(span_generators):
-    try:
+    with contextlib.suppress(StopIteration):
       span_gen.send(result)
-    except StopIteration:
-      pass
 
 
 def propagate_trace_context_task_factory(loop, coro):

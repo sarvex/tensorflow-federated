@@ -143,8 +143,9 @@ def infer_type(arg: Any) -> Optional[computation_types.Type]:
             tf.dtypes.as_dtype(tensor_proto.dtype),
             tf.TensorShape(tensor_proto.tensor_shape))
       except TypeError as err:
-        raise TypeError('Could not infer the TFF type of {}: {}'.format(
-            py_typecheck.type_string(type(arg)), err))
+        raise TypeError(
+            f'Could not infer the TFF type of {py_typecheck.type_string(type(arg))}: {err}'
+        )
 
 
 def type_to_tf_dtypes_and_shapes(type_spec: computation_types.Type):
@@ -279,51 +280,48 @@ def type_to_tf_structure(type_spec: computation_types.Type):
       return ()
     element_outputs = [(k, type_to_tf_structure(v)) for k, v in elements]
     named = element_outputs[0][0] is not None
-    if not all((e[0] is not None) == named for e in element_outputs):
+    if any((e[0] is not None) != named for e in element_outputs):
       raise ValueError('Tuple elements inconsistently named.')
     if type_spec.python_container is None:
-      if named:
-        return collections.OrderedDict(element_outputs)
+      return (collections.OrderedDict(element_outputs) if named else tuple(
+          v for _, v in element_outputs))
+    container_type = type_spec.python_container
+    if (py_typecheck.is_named_tuple(container_type) or
+        py_typecheck.is_attrs(container_type)):
+      return container_type(**dict(element_outputs))
+    elif container_type is tf.RaggedTensor:
+      flat_values = type_spec.flat_values
+      nested_row_splits = type_spec.nested_row_splits
+      ragged_rank = len(nested_row_splits)
+      return tf.RaggedTensorSpec(
+          shape=tf.TensorShape([None] * (ragged_rank + 1)),
+          dtype=flat_values.dtype,
+          ragged_rank=ragged_rank,
+          row_splits_dtype=nested_row_splits[0].dtype,
+          flat_values_spec=None)
+    elif container_type is tf.SparseTensor:
+      # We can't generally infer the shape from the type of the tensors, but
+      # we *can* infer the rank based on the shapes of `indices` or
+      # `dense_shape`.
+      if (type_spec.indices.shape is not None and
+          type_spec.indices.shape.dims[1] is not None):
+        rank = type_spec.indices.shape.dims[1]
+        shape = tf.TensorShape([None] * rank)
+      elif (type_spec.dense_shape.shape is not None and
+            type_spec.dense_shape.shape.dims[0] is not None):
+        rank = type_spec.dense_shape.shape.dims[0]
+        shape = tf.TensorShape([None] * rank)
       else:
-        return tuple(v for _, v in element_outputs)
+        shape = None
+      return tf.SparseTensorSpec(shape=shape, dtype=type_spec.values.dtype)
+    elif named:
+      return container_type(element_outputs)
     else:
-      container_type = type_spec.python_container
-      if (py_typecheck.is_named_tuple(container_type) or
-          py_typecheck.is_attrs(container_type)):
-        return container_type(**dict(element_outputs))
-      elif container_type is tf.RaggedTensor:
-        flat_values = type_spec.flat_values
-        nested_row_splits = type_spec.nested_row_splits
-        ragged_rank = len(nested_row_splits)
-        return tf.RaggedTensorSpec(
-            shape=tf.TensorShape([None] * (ragged_rank + 1)),
-            dtype=flat_values.dtype,
-            ragged_rank=ragged_rank,
-            row_splits_dtype=nested_row_splits[0].dtype,
-            flat_values_spec=None)
-      elif container_type is tf.SparseTensor:
-        # We can't generally infer the shape from the type of the tensors, but
-        # we *can* infer the rank based on the shapes of `indices` or
-        # `dense_shape`.
-        if (type_spec.indices.shape is not None and
-            type_spec.indices.shape.dims[1] is not None):
-          rank = type_spec.indices.shape.dims[1]
-          shape = tf.TensorShape([None] * rank)
-        elif (type_spec.dense_shape.shape is not None and
-              type_spec.dense_shape.shape.dims[0] is not None):
-          rank = type_spec.dense_shape.shape.dims[0]
-          shape = tf.TensorShape([None] * rank)
-        else:
-          shape = None
-        return tf.SparseTensorSpec(shape=shape, dtype=type_spec.values.dtype)
-      elif named:
-        return container_type(element_outputs)
-      else:
-        return container_type(
-            e if e[0] is not None else e[1] for e in element_outputs)
+      return container_type(
+          e if e[0] is not None else e[1] for e in element_outputs)
   else:
-    raise ValueError('Unsupported type {}.'.format(
-        py_typecheck.type_string(type(type_spec))))
+    raise ValueError(
+        f'Unsupported type {py_typecheck.type_string(type(type_spec))}.')
 
 
 def type_from_tensors(tensors):
@@ -385,19 +383,19 @@ def type_to_py_container(value, type_spec):
   if type_spec.is_federated():
     if type_spec.all_equal:
       structure_type_spec = type_spec.member
-    else:
-      if not isinstance(value, list):
-        raise TypeError('Unexpected Python type for non-all-equal TFF type '
-                        f'{type_spec}: expected `list`, found `{type(value)}`.')
+    elif isinstance(value, list):
       return [
           type_to_py_container(element, type_spec.member) for element in value
       ]
+    else:
+      raise TypeError('Unexpected Python type for non-all-equal TFF type '
+                      f'{type_spec}: expected `list`, found `{type(value)}`.')
   else:
     structure_type_spec = type_spec
 
   if structure_type_spec.is_sequence():
-    element_type = structure_type_spec.element
     if isinstance(value, list):
+      element_type = structure_type_spec.element
       return [type_to_py_container(element, element_type) for element in value]
     if isinstance(value, tf.data.Dataset):
       # `tf.data.Dataset` does not understand `Struct`, so the dataset
@@ -405,8 +403,9 @@ def type_to_py_container(value, type_spec):
       # when TFF is constructing datasets it always uses the proper Python
       # container, so we simply return `value` here without modification.
       return value
-    raise TypeError('Unexpected Python type for TFF type {}: {}'.format(
-        structure_type_spec, type(value)))
+    raise TypeError(
+        f'Unexpected Python type for TFF type {structure_type_spec}: {type(value)}'
+    )
 
   if not structure_type_spec.is_struct():
     return value
@@ -424,11 +423,10 @@ def type_to_py_container(value, type_spec):
   names_from_value = structure.name_list_with_nones(value)
   names_from_type_spec = structure.name_list_with_nones(structure_type_spec)
   for value_name, type_name in zip(names_from_value, names_from_type_spec):
-    if value_name is not None:
-      if value_name != type_name:
-        raise ValueError(
-            f'Cannot convert value with field name `{value_name}` into a '
-            f'type with field name `{type_name}`.')
+    if value_name is not None and value_name != type_name:
+      raise ValueError(
+          f'Cannot convert value with field name `{value_name}` into a '
+          f'type with field name `{type_name}`.')
 
   num_named_elements = len(dir(structure_type_spec))
   num_unnamed_elements = len(structure_type_spec) - num_named_elements
@@ -440,30 +438,21 @@ def type_to_py_container(value, type_spec):
         'This support has been removed: please change to use structures with '
         'either all-named or all-unnamed fields.')
   if container_type is None:
-    if num_named_elements:
-      container_type = collections.OrderedDict
-    else:
-      container_type = tuple
-
+    container_type = collections.OrderedDict if num_named_elements else tuple
   # Avoid projecting the `structure.StructType`d TFF value into a Python
   # container that is not supported.
   if (num_named_elements > 0 and
       is_container_type_without_names(container_type)):
     raise ValueError(
-        'Cannot represent value {} with named elements '
-        'using container type {} which does not support names. In TFF\'s '
-        'typesystem, this corresponds to an implicit downcast'.format(
-            value, container_type))
+        f"Cannot represent value {value} with named elements using container type {container_type} which does not support names. In TFF\'s typesystem, this corresponds to an implicit downcast"
+    )
   if (is_container_type_with_names(container_type) and
       len(dir(structure_type_spec)) != len(value)):
     # If the type specifies the names, we have all the information we need.
     # Otherwise we must raise here.
-    raise ValueError('When packaging as a Python value which requires names, '
-                     'the TFF type spec must have all names specified. Found '
-                     '{} names in type spec {} of length {}, with requested'
-                     'python type {}.'.format(
-                         len(dir(structure_type_spec)), structure_type_spec,
-                         len(value), container_type))
+    raise ValueError(
+        f'When packaging as a Python value which requires names, the TFF type spec must have all names specified. Found {len(dir(structure_type_spec))} names in type spec {structure_type_spec} of length {len(value)}, with requestedpython type {container_type}.'
+    )
 
   elements = []
   for index, (elem_name, elem_type) in enumerate(

@@ -331,13 +331,13 @@ def _repackage_partitioned_values(after_merge_results,
     after_merge_structs = [
         structure.from_container(x) for x in after_merge_results
     ]
-    result_container = []
-    for idx, (name, elem_type) in enumerate(
-        structure.iter_elements(result_type_spec)):
-      result_container.append(
-          (name,
-           _repackage_partitioned_values([x[idx] for x in after_merge_structs],
-                                         elem_type)))
+    result_container = [(
+        name,
+        _repackage_partitioned_values([x[idx] for x in after_merge_structs],
+                                      elem_type),
+    ) for idx, (
+        name,
+        elem_type) in enumerate(structure.iter_elements(result_type_spec))]
     return structure.Struct(result_container)
   elif result_type_spec.is_federated(
   ) and result_type_spec.placement.is_clients():
@@ -372,9 +372,7 @@ class MergeableCompExecutionContextValue(typed_object.TypedObject):
 
 
 async def _ingest_arg_or_none(arg, context, type_signature):
-  if arg is not None:
-    return await context.ingest(arg, type_signature)
-  return None
+  return await context.ingest(arg, type_signature) if arg is not None else None
 
 
 async def _invoke_up_to_merge_and_return_context(
@@ -445,10 +443,10 @@ async def _invoke_mergeable_comp_form(
       for x, context in zip(arg_list, execution_contexts)
   ])
 
-  repackaged_values = _repackage_partitioned_values(
+  return _repackage_partitioned_values(
       after_merge_results,
-      result_type_spec=comp.after_merge.type_signature.result)
-  return repackaged_values
+      result_type_spec=comp.after_merge.type_signature.result,
+  )
 
 
 class MergeableCompExecutionContext(context_base.Context):

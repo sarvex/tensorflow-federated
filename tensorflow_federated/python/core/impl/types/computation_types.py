@@ -365,12 +365,11 @@ class _Intern(abc.ABCMeta):
                                    cls._hash_normalized_args(*normalized_args))
     intern_pool_for_cls = _intern_pool[cls]
     interned = intern_pool_for_cls.get(hashable_args, None)
-    if interned is None:
-      new_instance = super().__call__(*normalized_args)
-      intern_pool_for_cls[hashable_args] = new_instance
-      return new_instance
-    else:
+    if interned is not None:
       return interned
+    new_instance = super().__call__(*normalized_args)
+    intern_pool_for_cls[hashable_args] = new_instance
+    return new_instance
 
 
 def _hash_dtype_and_shape(dtype: tf.DType, shape: tf.TensorShape) -> int:
@@ -412,7 +411,7 @@ class TensorType(Type, metaclass=_Intern):
       if _is_dtype_spec(dtype):
         dtype = tf.dtypes.as_dtype(dtype)
       else:
-        raise TypeError('Unrecognized dtype {}.'.format(str(dtype)))
+        raise TypeError(f'Unrecognized dtype {str(dtype)}.')
 
     if shape is None:
       shape = tf.TensorShape([])
@@ -654,8 +653,7 @@ class StructWithPythonType(StructType, metaclass=_Intern):
 
   def __repr__(self):
     members = _format_struct_type_members(self)
-    return 'StructType([{}]) as {}'.format(members,
-                                           self._container_type.__name__)
+    return f'StructType([{members}]) as {self._container_type.__name__}'
 
   def __hash__(self):
     # Salt to avoid overlap.
@@ -807,7 +805,7 @@ class AbstractType(Type, metaclass=_Intern):
     return self._label
 
   def __repr__(self):
-    return 'AbstractType(\'{}\')'.format(self._label)
+    return f"AbstractType(\'{self._label}\')"
 
   def __hash__(self):
     return hash(self._label)
@@ -853,9 +851,7 @@ class PlacementType(Type, metaclass=_Intern):
     return (self is other) or isinstance(other, PlacementType)
 
   def is_assignable_from(self, source_type: 'Type') -> bool:
-    if self is source_type:
-      return True
-    return isinstance(source_type, PlacementType)
+    return True if self is source_type else isinstance(source_type, PlacementType)
 
 
 class FederatedType(Type, metaclass=_Intern):
@@ -1059,8 +1055,8 @@ def to_type(spec) -> Type:
     # This is an unsupported mapping, likely a `dict`. StructType adds an
     # ordering, which the original container did not have.
     raise TypeError(
-        'Unsupported mapping type {}. Use collections.OrderedDict for '
-        'mappings.'.format(py_typecheck.type_string(type(spec))))
+        f'Unsupported mapping type {py_typecheck.type_string(type(spec))}. Use collections.OrderedDict for mappings.'
+    )
   elif isinstance(spec, structure.Struct):
     return StructType(structure.to_elements(spec))
   elif isinstance(spec, tf.RaggedTensorSpec):
@@ -1095,8 +1091,8 @@ def to_type(spec) -> Type:
     ], tf.SparseTensor)
   else:
     raise TypeError(
-        'Unable to interpret an argument of type {} as a type spec.'.format(
-            py_typecheck.type_string(type(spec))))
+        f'Unable to interpret an argument of type {py_typecheck.type_string(type(spec))} as a type spec.'
+    )
 
 
 def _to_type_from_attrs(spec) -> Type:
@@ -1108,12 +1104,11 @@ def _to_type_from_attrs(spec) -> Type:
         'Either populate an instance of the `attr.s` class with the '
         'appropriate field types, or use one of the other forms described in '
         '`tff.to_type()` instead.')
-  else:
-    # attrs class instance, inspect the field values for instances convertible
-    # to types.
-    elements = attr.asdict(
-        spec, dict_factory=collections.OrderedDict, recurse=False)
-    the_type = type(spec)
+  # attrs class instance, inspect the field values for instances convertible
+  # to types.
+  elements = attr.asdict(
+      spec, dict_factory=collections.OrderedDict, recurse=False)
+  the_type = type(spec)
 
   return StructWithPythonType(elements, the_type)
 
@@ -1155,8 +1150,7 @@ atexit.register(clear_disallowed_cache)
 def _possibly_disallowed_children(
     type_signature: Type,) -> _PossiblyDisallowedChildren:
   """Returns possibly disallowed child types appearing in `type_signature`."""
-  cached = _possibly_disallowed_children_cache.get(type_signature, None)
-  if cached:
+  if cached := _possibly_disallowed_children_cache.get(type_signature, None):
     return cached
   disallowed = _PossiblyDisallowedChildren(None, None, None)
   for child_type in type_signature.children():
@@ -1344,7 +1338,4 @@ def _string_representation(type_spec, formatted: bool) -> str:
 
   lines = _lines_for_type(type_spec, formatted)
   lines = [line.rstrip() for line in lines]
-  if formatted:
-    return '\n'.join(lines)
-  else:
-    return ''.join(lines)
+  return '\n'.join(lines) if formatted else ''.join(lines)

@@ -96,9 +96,9 @@ class PruneTensorFlowProtoTest(absltest.TestCase):
 def _extract_call_ops(comp: pb.Computation) -> Iterator[tf.compat.v1.NodeDef]:
   computation_oneof = comp.WhichOneof('computation')
   if computation_oneof != 'tensorflow':
-    raise TypeError('`prune_tensorflow_proto` only accepts `Computation` '
-                    'protos of the "tensorflow" variety; you have passed '
-                    'one of variety {}.'.format(computation_oneof))
+    raise TypeError(
+        f'`prune_tensorflow_proto` only accepts `Computation` protos of the "tensorflow" variety; you have passed one of variety {computation_oneof}.'
+    )
   graph_def = serialization_utils.unpack_graph_def(comp.tensorflow.graph_def)
   all_nodes = itertools.chain(graph_def.node,
                               *[f.node_def for f in graph_def.library.function])

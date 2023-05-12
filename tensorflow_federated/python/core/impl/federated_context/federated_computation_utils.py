@@ -57,7 +57,7 @@ def federated_computation_serializer(
       context_stack, suggested_name=suggested_name, parent=parent_context)
   if parameter_name is not None:
     py_typecheck.check_type(parameter_name, str)
-    parameter_name = '{}_{}'.format(context.name, str(parameter_name))
+    parameter_name = f'{context.name}_{str(parameter_name)}'
   with context_stack.install(context):
     if parameter_type is None:
       result = yield None
@@ -67,8 +67,7 @@ def federated_computation_serializer(
     annotated_result_type = type_conversions.infer_type(result)
     result = value_impl.to_value(result, annotated_result_type, context_stack)
     result_comp = result.comp
-    symbols_bound_in_context = context_stack.current.symbol_bindings
-    if symbols_bound_in_context:
+    if symbols_bound_in_context := context_stack.current.symbol_bindings:
       result_comp = building_blocks.Block(
           local_symbols=symbols_bound_in_context, result=result_comp)
     annotated_type = computation_types.FunctionType(parameter_type,

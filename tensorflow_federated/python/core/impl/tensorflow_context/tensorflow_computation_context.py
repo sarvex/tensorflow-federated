@@ -48,8 +48,8 @@ class TensorFlowComputationContext(context_base.Context):
     computation_oneof = computation_proto.WhichOneof('computation')
     if computation_oneof != 'tensorflow':
       raise ValueError(
-          'Can only invoke TensorFlow in the body of a TensorFlow '
-          'computation; got computation of type {}'.format(computation_oneof))
+          f'Can only invoke TensorFlow in the body of a TensorFlow computation; got computation of type {computation_oneof}'
+      )
     init_op, result = (
         tensorflow_utils.deserialize_and_call_tf_computation(
             computation_proto, arg, self._graph))

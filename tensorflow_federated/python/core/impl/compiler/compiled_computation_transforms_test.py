@@ -859,8 +859,7 @@ def _create_simple_selection_from_called_graph():
   noarg_tuple = _create_compiled_computation(
       lambda: [tf.constant(0.), tf.constant(1.)], None)
   called_noarg_tuple = building_blocks.Call(noarg_tuple, None)
-  selected_result = building_blocks.Selection(called_noarg_tuple, index=0)
-  return selected_result
+  return building_blocks.Selection(called_noarg_tuple, index=0)
 
 
 class SelectionFromCalledTensorFlowBlockTest(test_case.TestCase,
@@ -942,8 +941,7 @@ def _create_simple_lambda_wrapping_graph():
       tensor_type)
   x_ref = building_blocks.Reference('x', tf.int32)
   called_integer_identity = building_blocks.Call(integer_identity, x_ref)
-  lambda_wrap = building_blocks.Lambda('x', tf.int32, called_integer_identity)
-  return lambda_wrap
+  return building_blocks.Lambda('x', tf.int32, called_integer_identity)
 
 
 def _create_simple_lambda_calling_graph_with_arg_thrown_on_floor():
@@ -952,8 +950,7 @@ def _create_simple_lambda_calling_graph_with_arg_thrown_on_floor():
       tensor_type)
   x_data = building_blocks.Data('x', tf.int32)
   called_integer_identity = building_blocks.Call(integer_identity, x_data)
-  lambda_wrap = building_blocks.Lambda('y', tf.int32, called_integer_identity)
-  return lambda_wrap
+  return building_blocks.Lambda('y', tf.int32, called_integer_identity)
 
 
 class LambdaWrappingGraphTest(test_case.TestCase, parameterized.TestCase):
@@ -1035,8 +1032,7 @@ def _create_simple_tuple_of_called_graphs():
   tensor_type = computation_types.TensorType(tf.float32)
   called_const = building_block_factory.create_tensorflow_constant(
       tensor_type, 1.0)
-  tuple_of_called_graphs = building_blocks.Struct([called_const, called_const])
-  return tuple_of_called_graphs
+  return building_blocks.Struct([called_const, called_const])
 
 
 class StructCalledGraphsTest(test_case.TestCase, parameterized.TestCase):
@@ -1255,29 +1251,30 @@ class StructCalledGraphsTest(test_case.TestCase, parameterized.TestCase):
 
 def _simulate_permutation_behavior(tuple_type, permutation):
   type_elements = structure.to_elements(tuple_type)
-  constructed_type_elements = []
-  for k in permutation:
-    constructed_type_elements.append(type_elements[k])
+  constructed_type_elements = [type_elements[k] for k in permutation]
   return computation_types.StructType(constructed_type_elements)
 
 
 def _construct_permutation_tuple(n, m, offset):
   assert offset + m < n
-  tuple_type_elements = [(str(k),
-                          computation_types.AbstractType('T{}'.format(k)))
+  tuple_type_elements = [(str(k), computation_types.AbstractType(f'T{k}'))
                          for k in range(n)]
   initial_type = computation_types.StructType(tuple_type_elements)
   selected_indices = [j + offset for j in range(m)]
-  return ('tuple_type_{}_select_{}_indices_offset_{}'.format(n, m, offset),
-          initial_type, selected_indices)
+  return (
+      f'tuple_type_{n}_select_{m}_indices_offset_{offset}',
+      initial_type,
+      selected_indices,
+  )
 
 
 def _construct_permutation_tuple_collection(max_length):
   permutation_tuples = []
   for n in range(max_length):
     for m in range(n):
-      for offset in range(n - m):
-        permutation_tuples.append(_construct_permutation_tuple(n, m, offset))
+      permutation_tuples.extend(
+          _construct_permutation_tuple(n, m, offset)
+          for offset in range(n - m))
   return permutation_tuples
 
 
@@ -1650,8 +1647,7 @@ def _create_simple_called_composition_of_tf_blocks():
   zero = building_block_factory.create_tensorflow_constant(tensor_type, 0)
   add_one = _create_compiled_computation(lambda x: x + 1,
                                          computation_types.TensorType(tf.int32))
-  one = building_blocks.Call(add_one, zero)
-  return one
+  return building_blocks.Call(add_one, zero)
 
 
 class CalledCompositionOfTensorFlowBlocksTest(test_case.TestCase,
@@ -1842,9 +1838,8 @@ def _create_simple_called_graph_on_replicated_arg(n_replicates=2):
   tuple_type = computation_types.StructType([tf.int32] * n_replicates)
   tuple_identity = building_block_factory.create_compiled_identity(tuple_type)
   ref_to_int = building_blocks.Reference('x', tf.int32)
-  called_tuple_id = building_blocks.Call(
+  return building_blocks.Call(
       tuple_identity, building_blocks.Struct([ref_to_int] * n_replicates))
-  return called_tuple_id
 
 
 class CalledGraphOnReplicatedArgTest(test_case.TestCase):

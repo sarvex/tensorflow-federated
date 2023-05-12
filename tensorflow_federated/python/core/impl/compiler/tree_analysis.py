@@ -348,14 +348,11 @@ def _extract_calls_with_fn_consuming_arg(
 
   nodes_dependent_on_fn_predicate = extract_nodes_consuming(tree, fn_predicate)
 
-  instances = []
-
-  for node in nodes_dependent_on_arg_predicate:
-    if node.is_call():
-      if (node.argument in nodes_dependent_on_arg_predicate and
-          node.function in nodes_dependent_on_fn_predicate):
-        instances.append(node)
-  return instances
+  return [
+      node for node in nodes_dependent_on_arg_predicate if node.is_call() and (
+          node.argument in nodes_dependent_on_arg_predicate
+          and node.function in nodes_dependent_on_fn_predicate)
+  ]
 
 
 def check_broadcast_not_dependent_on_aggregate(tree):
@@ -487,8 +484,9 @@ def check_contains_no_unbound_references(tree, excluding=None):
     ValueError: If `comp` has unbound references.
   """
   if not contains_no_unbound_references(tree, excluding):
-    raise ValueError('The AST contains unbound references: {}.'.format(
-        tree.formatted_representation()))
+    raise ValueError(
+        f'The AST contains unbound references: {tree.formatted_representation()}.'
+    )
 
 
 def check_contains_no_new_unbound_references(old_tree, new_tree):
@@ -497,8 +495,7 @@ def check_contains_no_new_unbound_references(old_tree, new_tree):
       old_tree)[old_tree]
   new_unbound = transformation_utils.get_map_of_unbound_references(
       new_tree)[new_tree]
-  diff = new_unbound - old_unbound
-  if diff:
+  if diff := new_unbound - old_unbound:
     raise ValueError('Expected no new unbounded references. '
                      f'Old tree:\n{old_tree}\nNew tree:\n{new_tree}\n'
                      f'New unbound references: {diff}')

@@ -52,9 +52,8 @@ def _create_chained_whimsy_federated_applys(functions, arg):
     py_typecheck.check_type(fn, building_blocks.ComputationBuildingBlock)
     if not fn.parameter_type.is_assignable_from(arg.type_signature.member):
       raise TypeError(
-          'The parameter of the function is of type {}, and the argument is of '
-          'an incompatible type {}.'.format(
-              str(fn.parameter_type), str(arg.type_signature.member)))
+          f'The parameter of the function is of type {str(fn.parameter_type)}, and the argument is of an incompatible type {str(arg.type_signature.member)}.'
+      )
     call = building_block_factory.create_federated_apply(fn, arg)
     arg = call
   return call
@@ -66,9 +65,8 @@ def _create_chained_whimsy_federated_maps(functions, arg):
     py_typecheck.check_type(fn, building_blocks.ComputationBuildingBlock)
     if not fn.parameter_type.is_assignable_from(arg.type_signature.member):
       raise TypeError(
-          'The parameter of the function is of type {}, and the argument is of '
-          'an incompatible type {}.'.format(
-              str(fn.parameter_type), str(arg.type_signature.member)))
+          f'The parameter of the function is of type {str(fn.parameter_type)}, and the argument is of an incompatible type {str(arg.type_signature.member)}.'
+      )
     call = building_block_factory.create_federated_map(fn, arg)
     arg = call
   return call
@@ -2940,7 +2938,6 @@ class RemoveMappedOrAppliedIdentityTest(parameterized.TestCase):
        intrinsic_defs.SEQUENCE_MAP.uri,
        compiler_test_utils.create_whimsy_called_sequence_map),
   )
-  # pyformat: enable
   def test_removes_intrinsic(self, uri, factory):
     call = factory(parameter_name='a')
     comp = call
@@ -2948,8 +2945,7 @@ class RemoveMappedOrAppliedIdentityTest(parameterized.TestCase):
     transformed_comp, modified = tree_transformations.remove_mapped_or_applied_identity(
         comp)
 
-    self.assertEqual(comp.compact_representation(),
-                     '{}(<(a -> a),data>)'.format(uri))
+    self.assertEqual(comp.compact_representation(), f'{uri}(<(a -> a),data>)')
     self.assertEqual(transformed_comp.compact_representation(), 'data')
     self.assertEqual(transformed_comp.type_signature, comp.type_signature)
     self.assertTrue(modified)
@@ -3332,9 +3328,10 @@ class UniquifyCompiledComputationNamesTest(parameterized.TestCase):
     transformed_comp_names = [element._name for element in transformed_comp]
     self.assertNotEqual(transformed_comp_names, comp_names)
     self.assertEqual(
-        len(transformed_comp_names), len(set(transformed_comp_names)),
-        'The transformed computation names are not unique: {}.'.format(
-            transformed_comp_names))
+        len(transformed_comp_names),
+        len(set(transformed_comp_names)),
+        f'The transformed computation names are not unique: {transformed_comp_names}.',
+    )
     self.assertEqual(transformed_comp.type_signature, comp.type_signature)
     self.assertTrue(modified)
 

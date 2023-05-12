@@ -260,15 +260,14 @@ def create_binary_operator(
         '`operand_type` contains a type other than '
         '`computation_types.TensorType` and `computation_types.StructType`; '
         f'this is disallowed in the generic operators. Got: {operand_type} ')
-  if second_operand_type is not None:
-    if not type_analysis.is_generic_op_compatible_type(second_operand_type):
-      raise TypeError(
-          '`second_operand_type` contains a type other than '
-          '`computation_types.TensorType` and `computation_types.StructType`; '
-          'this is disallowed in the generic operators. '
-          f'Got: {second_operand_type} ')
-  elif second_operand_type is None:
+  if second_operand_type is None:
     second_operand_type = operand_type
+  elif not type_analysis.is_generic_op_compatible_type(second_operand_type):
+    raise TypeError(
+        '`second_operand_type` contains a type other than '
+        '`computation_types.TensorType` and `computation_types.StructType`; '
+        'this is disallowed in the generic operators. '
+        f'Got: {second_operand_type} ')
   py_typecheck.check_callable(operator)
 
   with tf.Graph().as_default() as graph:

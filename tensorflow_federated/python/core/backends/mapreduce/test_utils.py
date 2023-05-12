@@ -147,37 +147,25 @@ def get_federated_sum_example(*,
     return state
 
   @computations.tf_computation(
-      computation_types.SequenceType(tf.int32), prepare.type_signature.result)
+        computation_types.SequenceType(tf.int32), prepare.type_signature.result)
   def work(data, _):
     client_sum = data.reduce(initial_state=0, reduce_func=tf.add)
-    if secure_sum:
-      return [], client_sum, [], []
-    else:
-      return client_sum, [], [], []
+    return ([], client_sum, [], []) if secure_sum else (client_sum, [], [], [])
 
   @computations.tf_computation
   def zero():
-    if secure_sum:
-      return ()
-    else:
-      return 0
+    return () if secure_sum else 0
 
   client_update_type = work.type_signature.result[0]
   accumulator_type = zero.type_signature.result
 
   @computations.tf_computation(accumulator_type, client_update_type)
   def accumulate(accumulator, update):
-    if secure_sum:
-      return ()
-    else:
-      return accumulator + update
+    return () if secure_sum else accumulator + update
 
   @computations.tf_computation(accumulator_type, accumulator_type)
   def merge(accumulator1, accumulator2):
-    if secure_sum:
-      return ()
-    else:
-      return accumulator1 + accumulator2
+    return () if secure_sum else accumulator1 + accumulator2
 
   @computations.tf_computation(merge.type_signature.result)
   def report(accumulator):
@@ -196,10 +184,7 @@ def get_federated_sum_example(*,
 
   @computations.tf_computation(server_state_type, update_type)
   def update(state, update):
-    if secure_sum:
-      return state, update[1]
-    else:
-      return state, update[0]
+    return (state, update[1]) if secure_sum else (state, update[0])
 
   return forms.MapReduceForm(initialize, prepare, work, zero, accumulate, merge,
                              report, bitwidth, max_input, modulus, update)

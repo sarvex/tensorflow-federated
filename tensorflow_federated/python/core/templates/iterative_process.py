@@ -148,11 +148,9 @@ class IterativeProcess:
     if state_type.is_assignable_from(next_result_type):
       # The whole return value is the state type
       pass
-    elif (_is_nonempty_struct(next_result_type) and
-          state_type.is_assignable_from(next_result_type[0])):
-      # The first return value is state type
-      pass
-    else:
+    elif not _is_nonempty_struct(
+          next_result_type) or not state_type.is_assignable_from(
+              next_result_type[0]):
       raise errors.TemplateStateNotAssignableError(
           f'The first return argument of `next_fn` must be '
           f'assignable to its first input argument, but found\n'

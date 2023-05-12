@@ -92,25 +92,28 @@ def _create_conv_dropout_model(only_digits: bool = True) -> tf.keras.Model:
   """
   data_format = 'channels_last'
 
-  model = tf.keras.models.Sequential([
+  return tf.keras.models.Sequential([
       tf.keras.layers.Conv2D(
           32,
           kernel_size=(3, 3),
           activation='relu',
           data_format=data_format,
-          input_shape=(28, 28, 1)),
+          input_shape=(28, 28, 1),
+      ),
       tf.keras.layers.Conv2D(
-          64, kernel_size=(3, 3), activation='relu', data_format=data_format),
+          64,
+          kernel_size=(3, 3),
+          activation='relu',
+          data_format=data_format,
+      ),
       tf.keras.layers.MaxPool2D(pool_size=(2, 2), data_format=data_format),
       tf.keras.layers.Dropout(0.25),
       tf.keras.layers.Flatten(),
       tf.keras.layers.Dense(128, activation='relu'),
       tf.keras.layers.Dropout(0.5),
-      tf.keras.layers.Dense(
-          10 if only_digits else 62, activation=tf.nn.softmax),
+      tf.keras.layers.Dense(10 if only_digits else 62,
+                            activation=tf.nn.softmax),
   ])
-
-  return model
 
 
 def main(argv):

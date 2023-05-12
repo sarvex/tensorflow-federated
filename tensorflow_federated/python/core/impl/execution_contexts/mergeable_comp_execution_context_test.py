@@ -498,8 +498,8 @@ class MergeableCompExecutionContextTest(parameterized.TestCase):
     mergeable_comp_form = mergeable_comp_execution_context.MergeableCompForm(
         up_to_merge=up_to_merge, merge=merge, after_merge=after_merge)
     ex_factories = [
-        executor_stacks.local_executor_factory(
-            default_num_clients=int(num_clients / num_executors))
+        executor_stacks.local_executor_factory(default_num_clients=num_clients //
+                                               num_executors)
         for _ in range(num_executors)
     ]
     mergeable_comp_context = mergeable_comp_execution_context.MergeableCompExecutionContext(

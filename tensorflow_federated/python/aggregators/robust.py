@@ -181,7 +181,7 @@ def zeroing_factory(zeroing_norm: Union[float,
   """
 
   py_typecheck.check_type(norm_order, float)
-  if not (norm_order in [1.0, 2.0] or math.isinf(norm_order)):
+  if not (norm_order in {1.0, 2.0} or math.isinf(norm_order)):
     raise ValueError('norm_order must be 1.0, 2.0 or infinity')
 
   def make_zero_fn(value_type):

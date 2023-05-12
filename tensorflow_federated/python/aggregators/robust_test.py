@@ -449,7 +449,7 @@ class ClippingFactoryExecutionTest(test_case.TestCase):
     client_data = [1.0, 2.0, 5.0]
     client_weight = [1.0, 2.0, 2.0]
     output = process.next(state, client_data, client_weight)
-    self.assertAllClose(5 / 5, output.result)
+    self.assertAllClose(1, output.result)
     self.assertAllClose(2.0, output.measurements['zeroing_norm'])
     self.assertEqual(1, output.measurements['zeroed_count'])
 
@@ -479,7 +479,7 @@ class ClippingFactoryExecutionTest(test_case.TestCase):
     client_data = [_make_test_struct_value(v) for v in [1.0, 2.0, 5.0]]
     client_weight = [1.0, 2.0, 2.0]
     output = process.next(state, client_data, client_weight)
-    self._check_result(5 / 5, output.result)
+    self._check_result(1, output.result)
     self.assertAllClose(4.0, output.measurements['zeroing_norm'])
     self.assertEqual(1, output.measurements['zeroed_count'])
 
@@ -509,7 +509,7 @@ class ClippingFactoryExecutionTest(test_case.TestCase):
     client_data = [_make_test_struct_value(v) for v in [1.0, 2.0, 5.0]]
     client_weight = [1.0, 2.0, 2.0]
     output = process.next(state, client_data, client_weight)
-    self._check_result(5 / 5, output.result)
+    self._check_result(1, output.result)
     self.assertAllClose(2.0, output.measurements['zeroing_norm'])
     self.assertEqual(1, output.measurements['zeroed_count'])
 

@@ -146,9 +146,7 @@ def deserialize_type(
   elif type_variant == 'struct':
 
     def empty_str_to_none(s):
-      if s == '':  # pylint: disable=g-explicit-bool-comparison
-        return None
-      return s
+      return None if s == '' else s
 
     return computation_types.StructType(
         [(empty_str_to_none(e.name), deserialize_type(e.value))

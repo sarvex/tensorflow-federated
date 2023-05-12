@@ -265,13 +265,13 @@ class SecureSumFactory(factory.UnweightedAggregationFactory):
       ValueError: If `upper_bound_threshold` is provided as a negative constant.
     """
     py_typecheck.check_type(upper_bound_threshold, ThresholdEstType.__args__)
-    if lower_bound_threshold is not None:
-      if not isinstance(lower_bound_threshold, type(upper_bound_threshold)):
-        raise TypeError(
-            f'Provided upper_bound_threshold and lower_bound_threshold '
-            f'must have the same types, but found:\n'
-            f'type(upper_bound_threshold): {upper_bound_threshold}\n'
-            f'type(lower_bound_threshold): {lower_bound_threshold}')
+    if lower_bound_threshold is not None and not isinstance(
+        lower_bound_threshold, type(upper_bound_threshold)):
+      raise TypeError(
+          f'Provided upper_bound_threshold and lower_bound_threshold '
+          f'must have the same types, but found:\n'
+          f'type(upper_bound_threshold): {upper_bound_threshold}\n'
+          f'type(lower_bound_threshold): {lower_bound_threshold}')
 
     # Configuration specific for aggregating integer types.
     if _is_integer(upper_bound_threshold):

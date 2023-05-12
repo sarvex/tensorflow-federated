@@ -43,10 +43,9 @@ def _tf_wrapper_fn(parameter_type, name):
   """
   del name  # Unused.
   if not type_analysis.is_tensorflow_compatible_type(parameter_type):
-    raise TypeError('`tf_computation`s can accept only parameter types with '
-                    'constituents `SequenceType`, `StructType` '
-                    'and `TensorType`; you have attempted to create one '
-                    'with the type {}.'.format(parameter_type))
+    raise TypeError(
+        f'`tf_computation`s can accept only parameter types with constituents `SequenceType`, `StructType` and `TensorType`; you have attempted to create one with the type {parameter_type}.'
+    )
   ctx_stack = context_stack_impl.context_stack
   tf_serializer = tensorflow_serialization.tf_computation_serializer(
       parameter_type, ctx_stack)
@@ -72,10 +71,7 @@ def _federated_computation_wrapper_fn(parameter_type, name):
   Documentation its arguments can be found inside the definition of that class.
   """
   ctx_stack = context_stack_impl.context_stack
-  if parameter_type is None:
-    parameter_name = None
-  else:
-    parameter_name = 'arg'
+  parameter_name = None if parameter_type is None else 'arg'
   fn_generator = federated_computation_utils.federated_computation_serializer(
       parameter_name=parameter_name,
       parameter_type=parameter_type,

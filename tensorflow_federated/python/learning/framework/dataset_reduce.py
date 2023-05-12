@@ -50,7 +50,4 @@ def build_dataset_reduce_fn(
               tf.Tensor]:
   # TODO(b/162683412): remove `Iterable` after pytype fix.
   """Retruns a reduce loop function on input dataset."""
-  if simulation_flag:
-    return _for_iter_dataset_fn
-  else:
-    return _dataset_reduce_fn
+  return _for_iter_dataset_fn if simulation_flag else _dataset_reduce_fn

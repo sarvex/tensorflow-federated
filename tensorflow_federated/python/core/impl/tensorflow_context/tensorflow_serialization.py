@@ -80,7 +80,7 @@ def tf_computation_serializer(parameter_type: Optional[computation_types.Type],
         name = 'init_op_for_' + '_'.join(
             [v.name.replace(':0', '') for v in all_variables])
         if len(name) > 50:
-          name = 'init_op_for_{}_variables'.format(len(all_variables))
+          name = f'init_op_for_{len(all_variables)}_variables'
         initializer_ops.append(
             tf.compat.v1.initializers.variables(all_variables, name=name))
       initializer_ops.extend(

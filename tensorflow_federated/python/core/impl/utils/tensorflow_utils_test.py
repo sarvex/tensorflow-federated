@@ -808,7 +808,7 @@ class GraphUtilsTest(test_case.TestCase):
   def test_append_to_list_structure_for_element_type_spec_w_tuple_dict(self):
     type_spec = computation_types.to_type(
         [tf.int32, [('a', tf.bool), ('b', tf.float32)]])
-    result = tuple([[], collections.OrderedDict([('a', []), ('b', [])])])
+    result = [], collections.OrderedDict([('a', []), ('b', [])])
     for value in [[10, {'a': True, 'b': 30}], (40, [False, 60])]:
       tensorflow_utils.append_to_list_structure_for_element_type_spec(
           result, value, type_spec)
@@ -838,7 +838,7 @@ class GraphUtilsTest(test_case.TestCase):
 
   def test_append_to_list_structure_with_too_few_unnamed_elements(self):
     type_spec = computation_types.to_type([tf.int32, tf.int32])
-    result = tuple([[], []])
+    result = [], []
     value = [10]
     with self.assertRaises(TypeError):
       tensorflow_utils.append_to_list_structure_for_element_type_spec(
@@ -846,7 +846,7 @@ class GraphUtilsTest(test_case.TestCase):
 
   def test_append_to_list_structure_with_too_many_unnamed_elements(self):
     type_spec = computation_types.to_type([tf.int32, tf.int32])
-    result = tuple([[], []])
+    result = [], []
     value = [10, 20, 30]
     with self.assertRaises(TypeError):
       tensorflow_utils.append_to_list_structure_for_element_type_spec(
@@ -855,16 +855,18 @@ class GraphUtilsTest(test_case.TestCase):
   def test_replace_empty_leaf_lists_with_numpy_arrays(self):
     type_spec = computation_types.to_type(
         [tf.int32, [('a', tf.bool), ('b', tf.float32)]])
-    result = tuple([[], collections.OrderedDict([('a', []), ('b', [])])])
+    result = [], collections.OrderedDict([('a', []), ('b', [])])
     result = (
         tensorflow_utils.replace_empty_leaf_lists_with_numpy_arrays(
             result, type_spec))
 
-    expected_structure = tuple([
+    expected_structure = (
         np.array([], dtype=np.int32),
-        collections.OrderedDict([('a', np.array([], dtype=np.bool)),
-                                 ('b', np.array([], dtype=np.float32))])
-    ])
+        collections.OrderedDict([
+            ('a', np.array([], dtype=np.bool)),
+            ('b', np.array([], dtype=np.float32)),
+        ]),
+    )
 
     self.assertEqual(
         str(result).replace(' ', ''),
@@ -883,16 +885,17 @@ class GraphUtilsTest(test_case.TestCase):
         str(result).replace(' ', ''), expected_output_str.replace(' ', ''))
 
   def test_list_structures_from_element_type_spec_with_none_value(self):
-    self._test_list_structure([tf.int32, [('a', tf.bool), ('b', tf.float32)]],
-                              [None],
-                              str(
-                                  tuple([
-                                      np.array([], dtype=np.int32),
-                                      collections.OrderedDict([
-                                          ('a', np.array([], dtype=np.bool)),
-                                          ('b', np.array([], dtype=np.float32)),
-                                      ])
-                                  ])))
+    self._test_list_structure(
+        [tf.int32, [('a', tf.bool), ('b', tf.float32)]],
+        [None],
+        str((
+            np.array([], dtype=np.int32),
+            collections.OrderedDict([
+                ('a', np.array([], dtype=np.bool)),
+                ('b', np.array([], dtype=np.float32)),
+            ]),
+        )),
+    )
 
   def test_list_structures_from_element_type_spec_with_int_value(self):
     self._test_list_structure(tf.int32, [1],
@@ -1094,10 +1097,11 @@ class GraphUtilsTest(test_case.TestCase):
     new_graph_def = tensorflow_utils.add_control_deps_for_init_op(
         graph_def, 'abc')
     self.assertEqual(
-        ','.join('{}({})'.format(node.name, ','.join(node.input))
+        ','.join(f"{node.name}({','.join(node.input)})"
                  for node in new_graph_def.node),
         'foo(^abc),bar(foo,^abc),baz(foo,bar,^abc),'
-        'bak(bar,^abc),abc(def:0),def(^ghi),ghi()')
+        'bak(bar,^abc),abc(def:0),def(^ghi),ghi()',
+    )
 
   def test_coerce_dataset_elements_noop(self):
     x = tf.data.Dataset.range(5)
@@ -1111,15 +1115,14 @@ class GraphUtilsTest(test_case.TestCase):
     def _make_nested_tf_structure(x):
       return {
           'b':
-              tf.cast(x, tf.int32),
-          'a':
-              tuple([
-                  x,
-                  test_tuple_type(x * 2, x * 3),
-                  collections.OrderedDict([('x', x**2), ('y', x**3)])
-              ]),
+          tf.cast(x, tf.int32),
+          'a': (
+              x,
+              test_tuple_type(x * 2, x * 3),
+              collections.OrderedDict([('x', x**2), ('y', x**3)]),
+          ),
           'c':
-              tf.cast(x, tf.float32),
+          tf.cast(x, tf.float32),
       }
 
     x = tf.data.Dataset.range(5).map(_make_nested_tf_structure)

@@ -74,7 +74,7 @@ class ComputedValue(object):
     return self._value
 
   def __str__(self):
-    return 'ComputedValue({}, {})'.format(self._value, self._type_signature)
+    return f'ComputedValue({self._value}, {self._type_signature})'
 
 
 def to_canonical_value(value):
@@ -174,15 +174,16 @@ def to_representation_for_type(value, type_spec, callable_handler=None):
     inferred_type_spec = type_conversions.infer_type(value)
     if not type_spec.is_assignable_from(inferred_type_spec):
       raise TypeError(
-          'The tensor type {} of the value representation does not match '
-          'the type spec {}.'.format(inferred_type_spec, type_spec))
+          f'The tensor type {inferred_type_spec} of the value representation does not match the type spec {type_spec}.'
+      )
     return value
   elif type_spec.is_struct():
     type_spec_elements = structure.to_elements(type_spec)
     # Special-casing unodered dictionaries to allow their elements to be fed in
     # the order in which they're defined in the named tuple type.
-    if (isinstance(value, dict) and
-        (set(value.keys()) == set(k for k, _ in type_spec_elements))):
+    if isinstance(value, dict) and set(
+        value.keys()) == {k
+                          for k, _ in type_spec_elements}:
       value = collections.OrderedDict([
           (k, value[k]) for k, _ in type_spec_elements
       ])
@@ -190,17 +191,15 @@ def to_representation_for_type(value, type_spec, callable_handler=None):
     value_elements = structure.to_elements(value)
     if len(value_elements) != len(type_spec_elements):
       raise TypeError(
-          'The number of elements {} in the value tuple {} does not match the '
-          'number of elements {} in the type spec {}.'.format(
-              len(value_elements), value, len(type_spec_elements), type_spec))
+          f'The number of elements {len(value_elements)} in the value tuple {value} does not match the number of elements {len(type_spec_elements)} in the type spec {type_spec}.'
+      )
     result_elements = []
     for index, (type_elem_name, type_elem) in enumerate(type_spec_elements):
       value_elem_name, value_elem = value_elements[index]
       if value_elem_name not in [type_elem_name, None]:
         raise TypeError(
-            'Found element named `{}` where `{}` was expected at position {} '
-            'in the value tuple. Value: {}. Type: {}'.format(
-                value_elem_name, type_elem_name, index, value, type_spec))
+            f'Found element named `{value_elem_name}` where `{type_elem_name}` was expected at position {index} in the value tuple. Value: {value}. Type: {type_spec}'
+        )
       converted_value_elem = to_representation_for_type(value_elem, type_elem,
                                                         callable_handler)
       result_elements.append((type_elem_name, converted_value_elem))
@@ -247,13 +246,12 @@ def to_representation_for_type(value, type_spec, callable_handler=None):
                                         callable_handler)
     elif type_spec.placement is not placements.CLIENTS:
       raise TypeError(
-          'Unable to determine a valid value representation for a federated '
-          'type with non-equal members placed at {}.'.format(
-              type_spec.placement))
+          f'Unable to determine a valid value representation for a federated type with non-equal members placed at {type_spec.placement}.'
+      )
     elif not isinstance(value, (list, tuple)):
-      raise ValueError('Please pass a list or tuple to any function that'
-                       ' expects a federated type placed at {};'
-                       ' you passed {}'.format(type_spec.placement, value))
+      raise ValueError(
+          f'Please pass a list or tuple to any function that expects a federated type placed at {type_spec.placement}; you passed {value}'
+      )
     else:
       return [
           to_representation_for_type(v, type_spec.member, callable_handler)
@@ -261,8 +259,8 @@ def to_representation_for_type(value, type_spec, callable_handler=None):
       ]
   else:
     raise NotImplementedError(
-        'Unable to determine valid value representation for {} for what '
-        'is currently an unsupported TFF type {}.'.format(value, type_spec))
+        f'Unable to determine valid value representation for {value} for what is currently an unsupported TFF type {type_spec}.'
+    )
 
 
 def stamp_computed_value_into_graph(
@@ -282,42 +280,41 @@ def stamp_computed_value_into_graph(
   """
   if value is None:
     return None
-  else:
-    py_typecheck.check_type(value, ComputedValue)
-    value = ComputedValue(
-        to_representation_for_type(value.value, value.type_signature),
-        value.type_signature)
-    py_typecheck.check_type(graph, tf.Graph)
-    if value.type_signature.is_tensor():
-      if isinstance(value.value, np.ndarray):
-        value_type = computation_types.TensorType(
-            tf.dtypes.as_dtype(value.value.dtype),
-            tf.TensorShape(value.value.shape))
-        value.type_signature.check_assignable_from(value_type)
-        with graph.as_default():
-          return tf.constant(value.value)
-      else:
-        with graph.as_default():
-          return tf.constant(
-              value.value,
-              dtype=value.type_signature.dtype,
-              shape=value.type_signature.shape)
-    elif value.type_signature.is_struct():
-      elements = structure.to_elements(value.value)
-      type_elements = structure.to_elements(value.type_signature)
-      stamped_elements = []
-      for idx, (k, v) in enumerate(elements):
-        computed_v = ComputedValue(v, type_elements[idx][1])
-        stamped_v = stamp_computed_value_into_graph(computed_v, graph)
-        stamped_elements.append((k, stamped_v))
-      return structure.Struct(stamped_elements)
-    elif value.type_signature.is_sequence():
-      return tensorflow_utils.make_data_set_from_elements(
-          graph, value.value, value.type_signature.element)
+  py_typecheck.check_type(value, ComputedValue)
+  value = ComputedValue(
+      to_representation_for_type(value.value, value.type_signature),
+      value.type_signature)
+  py_typecheck.check_type(graph, tf.Graph)
+  if value.type_signature.is_tensor():
+    if isinstance(value.value, np.ndarray):
+      value_type = computation_types.TensorType(
+          tf.dtypes.as_dtype(value.value.dtype),
+          tf.TensorShape(value.value.shape))
+      value.type_signature.check_assignable_from(value_type)
+      with graph.as_default():
+        return tf.constant(value.value)
     else:
-      raise NotImplementedError(
-          'Unable to embed a computed value of type {} in graph.'.format(
-              value.type_signature))
+      with graph.as_default():
+        return tf.constant(
+            value.value,
+            dtype=value.type_signature.dtype,
+            shape=value.type_signature.shape)
+  elif value.type_signature.is_struct():
+    elements = structure.to_elements(value.value)
+    type_elements = structure.to_elements(value.type_signature)
+    stamped_elements = []
+    for idx, (k, v) in enumerate(elements):
+      computed_v = ComputedValue(v, type_elements[idx][1])
+      stamped_v = stamp_computed_value_into_graph(computed_v, graph)
+      stamped_elements.append((k, stamped_v))
+    return structure.Struct(stamped_elements)
+  elif value.type_signature.is_sequence():
+    return tensorflow_utils.make_data_set_from_elements(
+        graph, value.value, value.type_signature.element)
+  else:
+    raise NotImplementedError(
+        f'Unable to embed a computed value of type {value.type_signature} in graph.'
+    )
 
 
 def capture_computed_value_from_graph(value, type_spec):
@@ -388,8 +385,8 @@ def numpy_cast(value, dtype, shape):
   if not (len(value_as_numpy_array.shape) == len(shape.dims) and
           all(value_as_numpy_array.shape[i] == shape.dims[i] or
               shape.dims[i].value is None) for i in range(len(shape.dims))):
-    raise TypeError('Expected shape {}, found {}.'.format(
-        shape.dims, value_as_numpy_array.shape))
+    raise TypeError(
+        f'Expected shape {shape.dims}, found {value_as_numpy_array.shape}.')
   # Note: We don't want to make things more complicated than necessary by
   # returning the result as an array if it's just a plain scalar, so we
   # special-case this by pulling the singleton `np.ndarray`'s element out.
@@ -471,8 +468,8 @@ def multiply_by_scalar(value, multiplier):
         structure.Struct(result_elements), value.type_signature)
   else:
     raise NotImplementedError(
-        'Multiplying vlues of type {} by a scalar is unsupported.'.format(
-            value.type_signature))
+        f'Multiplying vlues of type {value.type_signature} by a scalar is unsupported.'
+    )
 
 
 class ComputationContext(object):
@@ -523,14 +520,13 @@ class ComputationContext(object):
       ValueError: If the name cannot be resolved.
     """
     py_typecheck.check_type(name, str)
-    value = self._local_symbols.get(str(name))
+    value = self._local_symbols.get(name)
     if value is not None:
       return value
     elif self._parent_context is not None:
       return self._parent_context.resolve_reference(name)
     else:
-      raise ValueError(
-          'The name \'{}\' is not defined in this context.'.format(name))
+      raise ValueError(f"The name \'{name}\' is not defined in this context.")
 
   def get_cardinality(self, placement: placements.PlacementLiteral) -> int:
     """Returns the cardinality for `placement`.
@@ -597,10 +593,9 @@ def fit_argument(arg: ComputedValue, type_spec,
         member_val = fit_argument(member_val, type_spec.member, context)
       if type_spec.all_equal:
         return ComputedValue(member_val.value, type_spec)
-      else:
-        cardinality = context.get_cardinality(type_spec.placement)
-        return ComputedValue([member_val.value for _ in range(cardinality)],
-                             type_spec)
+      cardinality = context.get_cardinality(type_spec.placement)
+      return ComputedValue([member_val.value for _ in range(cardinality)],
+                           type_spec)
     elif type_spec.all_equal:
       raise TypeError('Cannot fit a non all-equal {} into all-equal {}.'.format(
           arg.type_signature, type_spec))
@@ -739,10 +734,9 @@ class ReferenceContext(context_base.Context):
     if not computed_comp.type_signature.is_function():
       if computed_arg is not None:
         raise TypeError('Unexpected argument {}.'.format(arg))
-      else:
-        value = computed_comp.value
-        result_type = fn.type_signature.result
-        return type_conversions.type_to_py_container(value, result_type)
+      value = computed_comp.value
+      result_type = fn.type_signature.result
+      return type_conversions.type_to_py_container(value, result_type)
     else:
       result = computed_comp.value(computed_arg)
       py_typecheck.check_type(result, ComputedValue)
@@ -808,16 +802,16 @@ class ReferenceContext(context_base.Context):
       return self._compute_placement(comp, context)
     else:
       raise NotImplementedError(
-          'A computation building block of a type {} not currently recognized '
-          'by the reference context: {}.'.format(type(comp), comp))
+          f'A computation building block of a type {type(comp)} not currently recognized by the reference context: {comp}.'
+      )
 
   def _compute_compiled(self, comp, context):
     py_typecheck.check_type(comp, building_blocks.CompiledComputation)
     computation_oneof = comp.proto.WhichOneof('computation')
     if computation_oneof != 'tensorflow':
       raise ValueError(
-          'Expected all parsed compiled computations to be tensorflow, '
-          'but found \'{}\' instead.'.format(computation_oneof))
+          f"Expected all parsed compiled computations to be tensorflow, but found \'{computation_oneof}\' instead."
+      )
     else:
       return ComputedValue(lambda x: run_tensorflow(comp, x),
                            comp.type_signature)
@@ -909,22 +903,14 @@ class ReferenceContext(context_base.Context):
   def _compute_intrinsic(self, comp, context):
     py_typecheck.check_type(comp, building_blocks.Intrinsic)
     my_method = self._intrinsic_method_dict.get(comp.uri)
-    if my_method is not None:
-      # The interpretation of `my_method` depends on whether the intrinsic
-      # does or does not take arguments. If it does, the method accepts the
-      # argument as a `ComputedValue` instance. Otherwise, if the intrinsic
-      # is not a function, but a constant (such as `GENERIC_ZERO`), the
-      # method accepts the type of the result.
-      if comp.type_signature.is_function():
-        arg_type = comp.type_signature.parameter
-        return ComputedValue(
-            lambda x: my_method(fit_argument(x, arg_type, context), context),
-            comp.type_signature)
-      else:
-        return my_method(comp.type_signature, context)
-    else:
-      raise NotImplementedError('Intrinsic {} is currently unsupported.'.format(
-          comp.uri))
+    if my_method is None:
+      raise NotImplementedError(f'Intrinsic {comp.uri} is currently unsupported.')
+    if not comp.type_signature.is_function():
+      return my_method(comp.type_signature, context)
+    arg_type = comp.type_signature.parameter
+    return ComputedValue(
+        lambda x: my_method(fit_argument(x, arg_type, context), context),
+        comp.type_signature)
 
   def _compute_data(self, comp, context):
     py_typecheck.check_type(comp, building_blocks.Data)
@@ -957,8 +943,8 @@ class ReferenceContext(context_base.Context):
     py_typecheck.check_type(arg.type_signature, computation_types.FunctionType)
     if arg.type_signature.parameter is not None:
       raise TypeError(
-          'Expected federated_eval parameter to be `None`, found {}.'.format(
-              arg.type_signature.parameter))
+          f'Expected federated_eval parameter to be `None`, found {arg.type_signature.parameter}.'
+      )
     cardinality = context.get_cardinality(placement)
     fn_to_eval = arg.value
     if cardinality == 1:
@@ -1090,8 +1076,7 @@ class ReferenceContext(context_base.Context):
     elif (type_spec.is_sequence() or type_spec.is_function() or
           type_spec.is_abstract() or type_spec.is_placement()):
       raise TypeError(
-          'The generic_zero is not well-defined for TFF type {}.'.format(
-              type_spec))
+          f'The generic_zero is not well-defined for TFF type {type_spec}.')
     elif type_spec.is_federated():
       if type_spec.all_equal:
         return ComputedValue(
@@ -1104,19 +1089,19 @@ class ReferenceContext(context_base.Context):
             'implemented yet.')
     else:
       raise NotImplementedError(
-          'Generic zero support for {} is not implemented yet.'.format(
-              type_spec))
+          f'Generic zero support for {type_spec} is not implemented yet.')
 
   def _generic_plus(self, arg):
     py_typecheck.check_type(arg.type_signature, computation_types.StructType)
     if len(arg.type_signature) != 2:
-      raise TypeError('Generic plus is undefined for tuples of size {}.'.format(
-          len(arg.type_signature)))
+      raise TypeError(
+          f'Generic plus is undefined for tuples of size {len(arg.type_signature)}.'
+      )
     element_type = arg.type_signature[0]
     if arg.type_signature[1] != element_type:
-      raise TypeError('Generic plus is undefined for two-tuples of different '
-                      'types ({} vs. {}).'.format(element_type,
-                                                  arg.type_signature[1]))
+      raise TypeError(
+          f'Generic plus is undefined for two-tuples of different types ({element_type} vs. {arg.type_signature[1]}).'
+      )
     if element_type.is_tensor():
       val = numpy_cast(arg.value[0] + arg.value[1], element_type.dtype,
                        element_type.shape)
@@ -1138,9 +1123,8 @@ class ReferenceContext(context_base.Context):
       # TODO(b/113116813): Implement the remaining cases, e.g. federated
       # types like int32@SERVER.
       raise NotImplementedError(
-          'Generic plus not supported for elements of type {}, e.g. {}.'
-          'Please file an issue on GitHub if you need this type supported'
-          .format(element_type, arg.value[0]))
+          f'Generic plus not supported for elements of type {element_type}, e.g. {arg.value[0]}.Please file an issue on GitHub if you need this type supported'
+      )
 
   def _sequence_map(self, arg, context):
     del context  # Unused (left as arg b.c. functions must have same shape)
@@ -1224,8 +1208,7 @@ class ReferenceContext(context_base.Context):
   def _federated_aggregate(self, arg, context):
     py_typecheck.check_type(arg.type_signature, computation_types.StructType)
     if len(arg.type_signature) != 5:
-      raise TypeError('Expected a 5-tuple, found {}.'.format(
-          arg.type_signature))
+      raise TypeError(f'Expected a 5-tuple, found {arg.type_signature}.')
     values, zero, reduce, merge, report = arg.value
     values_type, zero_type, reduce_type, merge_type, report_type = arg.type_signature
     del merge, merge_type

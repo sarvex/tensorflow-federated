@@ -89,8 +89,9 @@ class ConcreteComputation(computation_base.Computation):
       type_spec = annotated_type
 
     if not type_spec.is_function():
-      raise TypeError('{} is not a functional type, from proto: {}'.format(
-          str(type_spec), str(computation_proto)))
+      raise TypeError(
+          f'{str(type_spec)} is not a functional type, from proto: {str(computation_proto)}'
+      )
 
     self._type_signature = type_spec
     self._context_stack = context_stack

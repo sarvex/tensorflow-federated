@@ -96,7 +96,7 @@ def _create_concat_fns(value_type):
 
 def _check_component_dtypes(value_type):
   """Checks the component tensor dtypes of the input `value_type`."""
-  component_dtypes = set([v.dtype for v in structure.flatten(value_type)])
+  component_dtypes = {v.dtype for v in structure.flatten(value_type)}
   # Check that all component tensors have the same dtype.
   if len(component_dtypes) != 1:
     raise TypeError('Component tensors of the structure should have the same '

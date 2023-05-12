@@ -44,12 +44,12 @@ class TestEnv(object):
     port = portpicker.pick_unused_port()
     self._server_pool = logging_pool.pool(max_workers=1)
     self._server = grpc.server(self._server_pool)
-    self._server.add_insecure_port('[::]:{}'.format(port))
+    self._server.add_insecure_port(f'[::]:{port}')
     self._service = executor_service.ExecutorService(ex_factory=ex_factory)
     executor_pb2_grpc.add_ExecutorServicer_to_server(self._service,
                                                      self._server)
     self._server.start()
-    self._channel = grpc.insecure_channel('localhost:{}'.format(port))
+    self._channel = grpc.insecure_channel(f'localhost:{port}')
     self._stub = executor_pb2_grpc.ExecutorStub(self._channel)
 
     serialized_cards = executor_serialization.serialize_cardinalities(

@@ -447,16 +447,13 @@ def _normalize_secure_quantized_sum_args(client_value, lower_bound,
         lambda v: v.dtype, bound_member) != structure.map_structure(
             lambda v: v.dtype, client_value_member)):
       raise StructuredBoundsTypeMismatchError(client_value_member, bound_member)
-  else:
-    # If bounds are scalar, must be compatible with all tensors in client_value.
-    if client_value_member.is_struct():
-      if len(set(dtypes)) > 1 or (bound_member.dtype != dtypes[0]):
-        raise ScalarBoundStructValueDTypeError(client_value_member,
-                                               bound_member)
-    else:
-      if bound_member.dtype != client_value_member.dtype:
-        raise ScalarBoundSimpleValueDTypeError(client_value_member,
-                                               bound_member)
+  elif client_value_member.is_struct():
+    if len(set(dtypes)) > 1 or (bound_member.dtype != dtypes[0]):
+      raise ScalarBoundStructValueDTypeError(client_value_member,
+                                             bound_member)
+  elif bound_member.dtype != client_value_member.dtype:
+    raise ScalarBoundSimpleValueDTypeError(client_value_member,
+                                           bound_member)
 
   return client_value, lower_bound, upper_bound
 
@@ -490,11 +487,11 @@ def _client_tensor_shift_for_secure_sum(value, lower_bound, upper_bound):
     clipped_val = tf.clip_by_value(value, lower_bound, upper_bound)
     range_span = upper_bound - lower_bound
     scale_factor = tf.math.floordiv(range_span, _SECAGG_MAX) + 1
-    shifted_value = tf.cond(
+    return tf.cond(
         scale_factor > 1,
         lambda: tf.math.floordiv(clipped_val - lower_bound, scale_factor),
-        lambda: clipped_val - lower_bound)
-    return shifted_value
+        lambda: clipped_val - lower_bound,
+    )
   else:
     # This should be ensured earlier and thus not user-facing.
     assert value.dtype in [tf.float32, tf.float64]
@@ -510,11 +507,11 @@ def _client_tensor_shift_for_secure_sum(value, lower_bound, upper_bound):
     # Perform shift in integer space to minimize float precision errors.
     shifted_value = rounded_value - tf.saturate_cast(
         tf.round(tf.cast(lower_bound, tf.float64) * scale_factor), tf.int64)
-    # Clip to expected range in case of numerical stability issues.
-    quantized_value = tf.clip_by_value(shifted_value,
-                                       tf.constant(0, dtype=tf.int64),
-                                       tf.constant(_SECAGG_MAX, dtype=tf.int64))
-    return quantized_value
+    return tf.clip_by_value(
+        shifted_value,
+        tf.constant(0, dtype=tf.int64),
+        tf.constant(_SECAGG_MAX, dtype=tf.int64),
+    )
 
 
 @tf.function

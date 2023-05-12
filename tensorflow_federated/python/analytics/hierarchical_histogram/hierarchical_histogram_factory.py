@@ -119,11 +119,8 @@ def create_hierarchical_histogram_aggregation_factory(
 
   # Converts `max_records_per_user` to the corresponding norm bound according to
   # the chosen `clip_mechanism` and `dp_mechanism`.
-  if dp_mechanism in ['central-gaussian', 'distributed-discrete-gaussian']:
-    if clip_mechanism == 'sub-sampling':
-      l2_norm_bound = max_records_per_user * math.sqrt(
-          _tree_depth(num_bins, arity))
-    elif clip_mechanism == 'distinct':
+  if dp_mechanism in {'central-gaussian', 'distributed-discrete-gaussian'}:
+    if clip_mechanism == 'distinct':
       # The following code block converts `max_records_per_user` to L2 norm
       # bound of the hierarchical histogram layer by layer. For the bottom
       # layer with only 0s and at most `max_records_per_user` 1s, the L2 norm
@@ -139,6 +136,9 @@ def create_hierarchical_histogram_aggregation_factory(
         square_layer_l2_norm_bound *= arity
       l2_norm_bound = math.sqrt(square_l2_norm_bound)
 
+    elif clip_mechanism == 'sub-sampling':
+      l2_norm_bound = max_records_per_user * math.sqrt(
+          _tree_depth(num_bins, arity))
   # Build nested aggregtion factory from innermost to outermost.
   # 1. Sum factory. The most inner factory that sums the preprocessed records.
   # (1) If `dp_mechanism` is in `CENTRAL_DP_MECHANISMS` or

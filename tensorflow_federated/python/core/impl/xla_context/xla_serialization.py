@@ -62,8 +62,7 @@ def unpack_xla_computation(any_pb):
   """
   py_typecheck.check_type(any_pb, any_pb2.Any)
   if any_pb.type_url != _HLO_MODULE_PROTO_URI:
-    raise ValueError('Not a serialized `HloModuleProto`: {}.'.format(
-        str(any_pb.type_url)))
+    raise ValueError(f'Not a serialized `HloModuleProto`: {str(any_pb.type_url)}.')
   return xla_client.XlaComputation(any_pb.value)
 
 
@@ -166,8 +165,8 @@ def create_xla_tff_computation(xla_computation, tensor_indexes, type_spec):
   expected_type = _remove_struct_element_names_from_tff_type(type_spec)
   if not reconstructed_type.is_equivalent_to(expected_type):
     raise ValueError(
-        'The TFF type of the XLA computation {} does not match the expected '
-        'TFF type {}.'.format(str(reconstructed_type), str(expected_type)))
+        f'The TFF type of the XLA computation {str(reconstructed_type)} does not match the expected TFF type {str(expected_type)}.'
+    )
   return pb.Computation(
       type=type_serialization.serialize_type(type_spec),
       xla=pb.Xla(

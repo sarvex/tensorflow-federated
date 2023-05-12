@@ -37,9 +37,9 @@ def prune_tensorflow_proto(proto):
   py_typecheck.check_type(proto, pb.Computation)
   computation_oneof = proto.WhichOneof('computation')
   if computation_oneof != 'tensorflow':
-    raise TypeError('`prune_tensorflow_proto` only accepts `Computation` '
-                    'protos of the \'tensorflow\' variety; you have passed '
-                    'one of variety {}.'.format(computation_oneof))
+    raise TypeError(
+        f"`prune_tensorflow_proto` only accepts `Computation` protos of the \'tensorflow\' variety; you have passed one of variety {computation_oneof}."
+    )
   if proto.tensorflow.parameter.WhichOneof('binding'):
     parameter_tensor_names = tensorflow_utils.extract_tensor_names_from_binding(
         proto.tensorflow.parameter)
@@ -65,8 +65,7 @@ def prune_tensorflow_proto(proto):
       initialize_op=original_init_op_name,
       parameter=original_parameter_binding,
       result=proto.tensorflow.result)
-  pruned_proto = pb.Computation(type=proto.type, tensorflow=tf_block)
-  return pruned_proto
+  return pb.Computation(type=proto.type, tensorflow=tf_block)
 
 
 # List of op names that are eligible for Grappler disabling.
@@ -91,9 +90,9 @@ def disable_grappler_for_partitioned_calls(proto):
   py_typecheck.check_type(proto, pb.Computation)
   computation_oneof = proto.WhichOneof('computation')
   if computation_oneof != 'tensorflow':
-    raise TypeError('`prune_tensorflow_proto` only accepts `Computation` '
-                    'protos of the "tensorflow" variety; you have passed '
-                    'one of variety {}.'.format(computation_oneof))
+    raise TypeError(
+        f'`prune_tensorflow_proto` only accepts `Computation` protos of the "tensorflow" variety; you have passed one of variety {computation_oneof}.'
+    )
   original_tf = proto.tensorflow
   graph_def = serialization_utils.unpack_graph_def(original_tf.graph_def)
   all_nodes = itertools.chain(graph_def.node,
@@ -115,5 +114,4 @@ def disable_grappler_for_partitioned_calls(proto):
       parameter=original_tf.parameter
       if original_tf.HasField('parameter') else None,
       result=original_tf.result)
-  new_proto = pb.Computation(type=proto.type, tensorflow=tf_block)
-  return new_proto
+  return pb.Computation(type=proto.type, tensorflow=tf_block)

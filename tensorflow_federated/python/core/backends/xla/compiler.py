@@ -60,8 +60,7 @@ def _create_xla_binary_op_computation(type_spec, xla_binary_op_constructor):
   """
   py_typecheck.check_type(type_spec, computation_types.Type)
   if not type_analysis.is_structure_of_tensors(type_spec):
-    raise ValueError('Not a tensor or a structure of tensors: {}'.format(
-        str(type_spec)))
+    raise ValueError(f'Not a tensor or a structure of tensors: {str(type_spec)}')
 
   tensor_shapes = _xla_tensor_shape_list_from_from_tff_tensor_or_struct_type(
       type_spec)
@@ -69,12 +68,12 @@ def _create_xla_binary_op_computation(type_spec, xla_binary_op_constructor):
   builder = xla_client.XlaBuilder('comp')
   param = xla_client.ops.Parameter(
       builder, 0, xla_client.Shape.tuple_shape(tensor_shapes * 2))
-  result_tensors = []
-  for idx in range(num_tensors):
-    result_tensors.append(
-        xla_binary_op_constructor(
-            xla_client.ops.GetTupleElement(param, idx),
-            xla_client.ops.GetTupleElement(param, idx + num_tensors)))
+  result_tensors = [
+      xla_binary_op_constructor(
+          xla_client.ops.GetTupleElement(param, idx),
+          xla_client.ops.GetTupleElement(param, idx + num_tensors),
+      ) for idx in range(num_tensors)
+  ]
   xla_client.ops.Tuple(builder, result_tensors)
   xla_computation = builder.build()
 
@@ -148,8 +147,8 @@ class XlaComputationFactory(
     py_typecheck.check_type(operand_type, computation_types.Type)
     py_typecheck.check_type(scalar_type, computation_types.TensorType)
     if not type_analysis.is_structure_of_tensors(operand_type):
-      raise ValueError('Not a tensor or a structure of tensors: {}'.format(
-          str(operand_type)))
+      raise ValueError(
+          f'Not a tensor or a structure of tensors: {str(operand_type)}')
 
     operand_shapes = _xla_tensor_shape_list_from_from_tff_tensor_or_struct_type(
         operand_type)
@@ -160,11 +159,10 @@ class XlaComputationFactory(
         builder, 0,
         xla_client.Shape.tuple_shape(operand_shapes + [scalar_shape]))
     scalar_ref = xla_client.ops.GetTupleElement(param, num_operand_tensors)
-    result_tensors = []
-    for idx in range(num_operand_tensors):
-      result_tensors.append(
-          xla_client.ops.Mul(
-              xla_client.ops.GetTupleElement(param, idx), scalar_ref))
+    result_tensors = [
+        xla_client.ops.Mul(xla_client.ops.GetTupleElement(param, idx),
+                           scalar_ref) for idx in range(num_operand_tensors)
+    ]
     xla_client.ops.Tuple(builder, result_tensors)
     xla_computation = builder.build()
 

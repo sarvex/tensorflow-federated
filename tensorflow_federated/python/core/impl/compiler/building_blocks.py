@@ -36,8 +36,9 @@ def _check_computation_oneof(
   """Checks that `computation_proto` is a oneof of the expected variant."""
   computation_oneof = computation_proto.WhichOneof('computation')
   if computation_oneof != expected_computation_oneof:
-    raise TypeError('Expected a {} computation, found {}.'.format(
-        expected_computation_oneof, computation_oneof))
+    raise TypeError(
+        f'Expected a {expected_computation_oneof} computation, found {computation_oneof}.'
+    )
 
 
 class UnexpectedBlockError(TypeError):
@@ -86,20 +87,17 @@ class ComputationBuildingBlock(typed_object.TypedObject, metaclass=abc.ABCMeta):
     py_typecheck.check_type(computation_proto, pb.Computation)
     computation_oneof = computation_proto.WhichOneof('computation')
     deserializer = cls._deserializer_dict.get(computation_oneof)
-    if deserializer is not None:
-      deserialized = deserializer(computation_proto)
-      type_spec = type_serialization.deserialize_type(computation_proto.type)
-      if not deserialized.type_signature.is_equivalent_to(type_spec):
-        raise ValueError(
-            'The type {} derived from the computation structure does not '
-            'match the type {} declared in its signature'.format(
-                deserialized.type_signature, type_spec))
-      return deserialized
-    else:
+    if deserializer is None:
       raise NotImplementedError(
-          'Deserialization for computations of type {} has not been '
-          'implemented yet.'.format(computation_oneof))
-    return deserializer(computation_proto)
+          f'Deserialization for computations of type {computation_oneof} has not been implemented yet.'
+      )
+    deserialized = deserializer(computation_proto)
+    type_spec = type_serialization.deserialize_type(computation_proto.type)
+    if not deserialized.type_signature.is_equivalent_to(type_spec):
+      raise ValueError(
+          f'The type {deserialized.type_signature} derived from the computation structure does not match the type {type_spec} declared in its signature'
+      )
+    return deserialized
 
   def __init__(self, type_spec):
     """Constructs a computation building block with the given TFF type.
@@ -366,8 +364,9 @@ class Selection(ComputationBuildingBlock):
           'Cannot simultaneously specify a name and an index, choose one.')
     source_type = source.type_signature
     if not source_type.is_struct():
-      raise TypeError('Expected the source of selection to be a TFF struct, '
-                      'instead found it to be of type {}.'.format(source_type))
+      raise TypeError(
+          f'Expected the source of selection to be a TFF struct, instead found it to be of type {source_type}.'
+      )
     if name is not None:
       py_typecheck.check_type(name, str)
       if not name:
@@ -419,9 +418,8 @@ class Selection(ComputationBuildingBlock):
   def as_index(self) -> int:
     if self._index is not None:
       return self._index
-    else:
-      field_to_index = structure.name_to_index_map(self.source.type_signature)
-      return field_to_index[self._name]
+    field_to_index = structure.name_to_index_map(self.source.type_signature)
+    return field_to_index[self._name]
 
   def __repr__(self):
     if self._name is not None:
@@ -566,23 +564,22 @@ class Call(ComputationBuildingBlock):
     if arg is not None:
       py_typecheck.check_type(arg, ComputationBuildingBlock)
     if not fn.type_signature.is_function():
-      raise TypeError('Expected fn to be of a functional type, '
-                      'but found that its type is {}.'.format(
-                          fn.type_signature))
+      raise TypeError(
+          f'Expected fn to be of a functional type, but found that its type is {fn.type_signature}.'
+      )
     if fn.type_signature.parameter is not None:
       if arg is None:
-        raise TypeError('The invoked function expects an argument of type {}, '
-                        'but got None instead.'.format(
-                            fn.type_signature.parameter))
+        raise TypeError(
+            f'The invoked function expects an argument of type {fn.type_signature.parameter}, but got None instead.'
+        )
       if not fn.type_signature.parameter.is_assignable_from(arg.type_signature):
         raise TypeError(
-            'The parameter of the invoked function is expected to be of '
-            'type {}, but the supplied argument is of an incompatible '
-            'type {}.'.format(fn.type_signature.parameter, arg.type_signature))
+            f'The parameter of the invoked function is expected to be of type {fn.type_signature.parameter}, but the supplied argument is of an incompatible type {arg.type_signature}.'
+        )
     elif arg is not None:
       raise TypeError(
-          'The invoked function does not expect any parameters, but got '
-          'an argument of type {}.'.format(py_typecheck.type_string(type(arg))))
+          f'The invoked function does not expect any parameters, but got an argument of type {py_typecheck.type_string(type(arg))}.'
+      )
     super().__init__(fn.type_signature.result)
     # By now, this condition should hold, so we only double-check in debug mode.
     assert (arg is not None) == (fn.type_signature.parameter is not None)
@@ -666,10 +663,8 @@ class Lambda(ComputationBuildingBlock):
       parameter_name = None
     if (parameter_name is None) != (parameter_type is None):
       raise TypeError(
-          'A lambda expression must have either a valid parameter name and type '
-          'or both parameter name and type must be `None`. '
-          '`parameter_name` was {} but `parameter_type` was {}.'.format(
-              parameter_name, parameter_type))
+          f'A lambda expression must have either a valid parameter name and type or both parameter name and type must be `None`. `parameter_name` was {parameter_name} but `parameter_type` was {parameter_type}.'
+      )
     if parameter_name is not None:
       py_typecheck.check_type(parameter_name, str)
       parameter_type = computation_types.to_type(parameter_type)
@@ -789,9 +784,8 @@ class Block(ComputationBuildingBlock):
       if (not isinstance(element, tuple) or (len(element) != 2) or
           not isinstance(element[0], str)):
         raise TypeError(
-            'Expected the locals to be a list of 2-element structs with string '
-            'name as their first element, but this is not the case for the '
-            'local at position {} in the sequence: {}.'.format(index, element))
+            f'Expected the locals to be a list of 2-element structs with string name as their first element, but this is not the case for the local at position {index} in the sequence: {element}.'
+        )
       name = element[0]
       value = element[1]
       py_typecheck.check_type(value, ComputationBuildingBlock)
@@ -934,8 +928,7 @@ class Data(ComputationBuildingBlock):
     if not uri:
       raise ValueError('Empty string cannot be passed as URI to Data.')
     if type_spec is None:
-      raise TypeError(
-          'Intrinsic {} cannot be created without a TFF type.'.format(uri))
+      raise TypeError(f'Intrinsic {uri} cannot be created without a TFF type.')
     type_spec = computation_types.to_type(type_spec)
     super().__init__(type_spec)
     self._uri = uri
@@ -1063,7 +1056,7 @@ class Placement(ComputationBuildingBlock):
     return self._literal.uri
 
   def __repr__(self) -> str:
-    return 'Placement(\'{}\')'.format(self.uri)
+    return f"Placement(\'{self.uri}\')"
 
 
 def _string_representation(
@@ -1182,10 +1175,7 @@ def _string_representation(
       return [comp.uri]
     elif comp.is_lambda():
       result_lines = _lines_for_comp(comp.result, formatted)
-      if comp.parameter_type is None:
-        param_name = ''
-      else:
-        param_name = comp.parameter_name
+      param_name = '' if comp.parameter_type is None else comp.parameter_name
       lines = [['({} -> '.format(param_name)], result_lines, [')']]
       return _join(lines)
     elif comp.is_placement():
@@ -1206,10 +1196,7 @@ def _string_representation(
 
   lines = _lines_for_comp(comp, formatted)
   lines = [line.rstrip() for line in lines]
-  if formatted:
-    return '\n'.join(lines)
-  else:
-    return ''.join(lines)
+  return '\n'.join(lines) if formatted else ''.join(lines)
 
 
 def _structural_representation(comp):

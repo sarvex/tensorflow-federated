@@ -197,18 +197,17 @@ def chain_measured_processes(
       ]))
 
   @computations.federated_computation(concatenated_state_type_spec,
-                                      first_process_value_type_spec)
+                                        first_process_value_type_spec)
   def composition_next(state, values):
     new_states = collections.OrderedDict()
     measurements = collections.OrderedDict()
     for name, process in measured_processes.items():
       values_type = values.type_signature
-      if values_type is not None:
-        if not values_type.is_assignable_from(
-            process.next.type_signature.parameter[1]):
-          raise TypeError(f'Cannot call function {name} of type '
-                          f'{process.next.type_signature} with value of type '
-                          f'{values.type_signature}.')
+      if values_type is not None and not values_type.is_assignable_from(
+          process.next.type_signature.parameter[1]):
+        raise TypeError(f'Cannot call function {name} of type '
+                        f'{process.next.type_signature} with value of type '
+                        f'{values.type_signature}.')
       output = process.next(state[name], values)
       new_states[name] = output.state
       measurements[name] = output.measurements

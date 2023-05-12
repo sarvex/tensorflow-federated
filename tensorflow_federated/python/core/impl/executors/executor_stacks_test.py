@@ -81,17 +81,17 @@ class ExecutorMock(mock.MagicMock, executor_base.Executor):
 def _create_concurrent_maxthread_tuples():
   tuples = []
   for concurrency in range(1, 5):
-    local_ex_string = 'local_executor_{}_clients_per_thread'.format(concurrency)
+    local_ex_string = f'local_executor_{concurrency}_clients_per_thread'
     tf_executor_mock = ExecutorMock()
     ex_factory = executor_stacks.local_executor_factory(
         clients_per_thread=concurrency, leaf_executor_fn=tf_executor_mock)
     tuples.append((local_ex_string, ex_factory, concurrency, tf_executor_mock))
-    sizing_ex_string = 'sizing_executor_{}_client_thread'.format(concurrency)
+    sizing_ex_string = f'sizing_executor_{concurrency}_client_thread'
     tf_executor_mock = ExecutorMock()
     ex_factory = executor_stacks.sizing_executor_factory(
         clients_per_thread=concurrency, leaf_executor_fn=tf_executor_mock)
     tuples.append((sizing_ex_string, ex_factory, concurrency, tf_executor_mock))
-    debug_ex_string = 'debug_executor_{}_client_thread'.format(concurrency)
+    debug_ex_string = f'debug_executor_{concurrency}_client_thread'
     tf_executor_mock = ExecutorMock()
     ex_factory = executor_stacks.thread_debugging_executor_factory(
         clients_per_thread=concurrency, leaf_executor_fn=tf_executor_mock)

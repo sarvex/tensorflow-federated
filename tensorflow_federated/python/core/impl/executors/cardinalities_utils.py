@@ -32,15 +32,16 @@ def merge_cardinalities(existing, to_add):
   elif not existing:
     return to_add
   cardinalities = {}
-  cardinalities.update(existing)
+  cardinalities |= existing
   for key, val in to_add.items():
     py_typecheck.check_type(key, placements.PlacementLiteral)
     py_typecheck.check_type(val, int)
     if key not in cardinalities:
       cardinalities[key] = val
     elif cardinalities[key] != val:
-      raise ValueError('Conflicting cardinalities for {}: {} vs {}'.format(
-          key, val, cardinalities[key]))
+      raise ValueError(
+          f'Conflicting cardinalities for {key}: {val} vs {cardinalities[key]}'
+      )
   return cardinalities
 
 

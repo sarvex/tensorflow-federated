@@ -569,10 +569,7 @@ class FederatedZipTest(parameterized.TestCase, IntrinsicTestBase):
         ]))
     self.assert_types_identical(mixed_result.type_signature, expected)
 
-  @parameterized.named_parameters([
-      ('test_n_' + str(n) + '_m_' + str(m), n, m)
-      for n, m in itertools.product([1, 2, 3], [1, 2, 3])
-  ])
+  @parameterized.named_parameters([(f'test_n_{str(n)}_m_{str(m)}', n, m) for n, m in itertools.product([1, 2, 3], [1, 2, 3])])
   def test_federated_zip_n_tuple_mixed_args(self, n, m):
     tuple_fed_type = computation_types.at_clients((tf.int32, tf.int32))
     single_fed_type = computation_types.at_clients(tf.int32)

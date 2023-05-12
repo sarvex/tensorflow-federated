@@ -22,11 +22,7 @@ from tensorflow_federated.python.core.impl.types import computation_types
 
 def _filter_node_list_to_ops(nodedefs: List[tf.compat.v1.NodeDef],
                              ops_to_find: Set[str]) -> List[str]:
-  found_ops = []
-  for node in nodedefs:
-    if node.op in ops_to_find:
-      found_ops.append(node.op)
-  return found_ops
+  return [node.op for node in nodedefs if node.op in ops_to_find]
 
 
 class TestCase(tf.test.TestCase, absltest.TestCase):
@@ -85,11 +81,10 @@ class TestCase(tf.test.TestCase, absltest.TestCase):
     xl = tf.nest.flatten(x)
     yl = tf.nest.flatten(y)
     if len(xl) != len(yl):
-      self.fail('The sizes of structures {} and {} mismatch.'.format(
-          str(len(xl)), str(len(yl))))
+      self.fail(f'The sizes of structures {len(xl)} and {len(yl)} mismatch.')
     for xe, ye in zip(xl, yl):
       if xe != ye:
-        self.fail('Mismatching elements {} and {}.'.format(str(xe), str(ye)))
+        self.fail(f'Mismatching elements {str(xe)} and {str(ye)}.')
 
   def assert_graph_contains_ops(self, graphdef: tf.compat.v1.GraphDef,
                                 ops: Set[str]):
@@ -105,14 +100,12 @@ class TestCase(tf.test.TestCase, absltest.TestCase):
 
   def assert_graph_does_not_contain_ops(self, graphdef: tf.compat.v1.GraphDef,
                                         forbidden_ops: Set[str]):
-    found_ops = _filter_node_list_to_ops(graphdef.node, forbidden_ops)
-    if found_ops:
+    if found_ops := _filter_node_list_to_ops(graphdef.node, forbidden_ops):
       self.fail(
           f'Ops {forbidden_ops} are forbidden, but encountered {found_ops} '
           'in GraphDef.')
     for function in graphdef.library.function:
-      found_ops = _filter_node_list_to_ops(function.node_def, forbidden_ops)
-      if found_ops:
+      if found_ops := _filter_node_list_to_ops(function.node_def, forbidden_ops):
         self.fail(
             f'Ops {forbidden_ops} are forbidden, but encountered {found_ops} in GraphDef.'
         )

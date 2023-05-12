@@ -84,9 +84,8 @@ class HierarchicalHistogramDecoder():
     if len(self._hierarchical_histogram) == 1:
       self._arity = 2
     else:
-      self._arity = int(
-          len(self._hierarchical_histogram[1]) /
-          len(self._hierarchical_histogram[0]))
+      self._arity = len(self._hierarchical_histogram[1]) // len(
+          self._hierarchical_histogram[0])
     self._size = len(hierarchical_histogram[-1])
     self._num_layers = math.ceil(math.log(self._size, self._arity)) + 1
     self._use_efficient = use_efficient
@@ -105,8 +104,7 @@ class HierarchicalHistogramDecoder():
       node indexed by (layer, index).
     """
     reverse_depth = self._num_layers - 1 - layer
-    right_most_child = int((index + 1) * (self._arity**reverse_depth) - 1)
-    return right_most_child
+    return int((index + 1) * (self._arity**reverse_depth) - 1)
 
   def _left_right_most_leaf(self, layer: int, index: int) -> Tuple[int, int]:
     """Returns the leftmost and rightmost leaves from a node.
@@ -226,13 +224,12 @@ class HierarchicalHistogramDecoder():
     """
     if layer == self._num_layers - 1:
       return self._hierarchical_histogram[layer][index]
-    else:
-      node_value = self._hierarchical_histogram[layer][index]
-      below_value = 0
-      for child_index in range(index * self._arity, (index + 1) * self._arity):
-        below_value += self._from_below(layer + 1, child_index)
-      weight = self._arity / (self._arity + 1)
-      return weight * node_value + (1 - weight) * below_value
+    node_value = self._hierarchical_histogram[layer][index]
+    below_value = sum(
+        self._from_below(layer + 1, child_index)
+        for child_index in range(index * self._arity, (index + 1) * self._arity))
+    weight = self._arity / (self._arity + 1)
+    return weight * node_value + (1 - weight) * below_value
 
   def _from_above(self, layer: int, index: int) -> float:
     """Returns an estimate of a node value from nodes not in its subtree.
@@ -253,17 +250,16 @@ class HierarchicalHistogramDecoder():
     """
     if layer == 0:
       return self._hierarchical_histogram[layer][index]
-    else:
-      node_value = self._hierarchical_histogram[layer][index]
-      parent_index = index // self._arity
-      above_value = self._from_above(layer - 1, parent_index)
-      for sibling_index in range(parent_index * self._arity,
-                                 (parent_index + 1) * self._arity):
-        if sibling_index != index:
-          above_value -= self._from_below(layer, sibling_index)
+    node_value = self._hierarchical_histogram[layer][index]
+    parent_index = index // self._arity
+    above_value = self._from_above(layer - 1, parent_index)
+    for sibling_index in range(parent_index * self._arity,
+                               (parent_index + 1) * self._arity):
+      if sibling_index != index:
+        above_value -= self._from_below(layer, sibling_index)
 
-      weight = 1 / (3 - math.pow(self._arity, layer - self._num_layers + 1))
-      return weight * node_value + (1 - weight) * above_value
+    weight = 1 / (3 - math.pow(self._arity, layer - self._num_layers + 1))
+    return weight * node_value + (1 - weight) * above_value
 
   def node_query(self, layer: int, index: int) -> float:
     """Queries the value of a bin in the hierarchical histogram.
@@ -286,21 +282,20 @@ class HierarchicalHistogramDecoder():
 
     if not self._use_efficient:
       return self._hierarchical_histogram[layer][index]
-    else:
-      below_value = self._from_below(layer, index)
-      if layer == 0:
-        return below_value
-      parent_index = index // self._arity
-      above_value = self._from_above(layer - 1, parent_index)
-      for sibling_index in range(parent_index * self._arity,
-                                 (parent_index + 1) * self._arity):
-        if sibling_index != index:
-          above_value -= self._from_below(layer, sibling_index)
-      below_variance = 1 / (2 - (self._arity**(layer - self._num_layers + 1)))
-      above_variance = 1 / (3 - (self._arity**(layer - self._num_layers + 1)))
-      weight = (1 / below_variance) / ((1 / below_variance) +
-                                       (1 / (below_variance + above_variance)))
-      return weight * below_value + (1 - weight) * above_value
+    below_value = self._from_below(layer, index)
+    if layer == 0:
+      return below_value
+    parent_index = index // self._arity
+    above_value = self._from_above(layer - 1, parent_index)
+    for sibling_index in range(parent_index * self._arity,
+                               (parent_index + 1) * self._arity):
+      if sibling_index != index:
+        above_value -= self._from_below(layer, sibling_index)
+    below_variance = 1 / (2 - (self._arity**(layer - self._num_layers + 1)))
+    above_variance = 1 / (3 - (self._arity**(layer - self._num_layers + 1)))
+    weight = (1 / below_variance) / ((1 / below_variance) +
+                                     (1 / (below_variance + above_variance)))
+    return weight * below_value + (1 - weight) * above_value
 
   def _range_query(self, left: int, right: int, layer: int,
                    index: int) -> float:

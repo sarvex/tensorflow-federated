@@ -101,8 +101,8 @@ def stamp_parameter_in_graph(parameter_name, parameter_type, graph):
     element_name_value_pairs = []
     element_bindings = []
     for e in structure.iter_elements(parameter_type):
-      e_val, e_binding = stamp_parameter_in_graph(
-          '{}_{}'.format(parameter_name, e[0]), e[1], graph)
+      e_val, e_binding = stamp_parameter_in_graph(f'{parameter_name}_{e[0]}',
+                                                  e[1], graph)
       element_name_value_pairs.append((e[0], e_val))
       element_bindings.append(e_binding)
     return (structure.Struct(element_name_value_pairs),
@@ -140,12 +140,12 @@ def make_dataset_from_variant_tensor(variant_tensor, type_spec):
   """
   if not tf.is_tensor(variant_tensor):
     raise TypeError(
-        'Expected `variant_tensor` to be a tensor, found {}.'.format(
-            py_typecheck.type_string(type(variant_tensor))))
+        f'Expected `variant_tensor` to be a tensor, found {py_typecheck.type_string(type(variant_tensor))}.'
+    )
   if variant_tensor.dtype != tf.variant:
     raise TypeError(
-        'Expected `variant_tensor` to be of a variant type, found {}.'.format(
-            variant_tensor.dtype))
+        f'Expected `variant_tensor` to be of a variant type, found {variant_tensor.dtype}.'
+    )
   with tf.device('/device:cpu:0'):
     return tf.data.experimental.from_variant(
         variant_tensor,
@@ -335,8 +335,8 @@ def compute_map_from_bindings(source, target):
   target_oneof = target.WhichOneof('binding')
   if source_oneof != target_oneof:
     raise ValueError(
-        'Source and target binding variants mismatch: {} vs. {}'.format(
-            source_oneof, target_oneof))
+        f'Source and target binding variants mismatch: {source_oneof} vs. {target_oneof}'
+    )
   if source_oneof == 'tensor':
     return collections.OrderedDict([(str(source.tensor.tensor_name),
                                      str(target.tensor.tensor_name))])
@@ -344,28 +344,27 @@ def compute_map_from_bindings(source, target):
     sequence_oneof = source.sequence.WhichOneof('binding')
     if target.sequence.WhichOneof('binding') != sequence_oneof:
       raise ValueError(
-          'Source and target sequence bindings mismatch: {} vs. {}'.format(
-              sequence_oneof, target.sequence.WhichOneof('binding')))
+          f"Source and target sequence bindings mismatch: {sequence_oneof} vs. {target.sequence.WhichOneof('binding')}"
+      )
     if sequence_oneof == 'variant_tensor_name':
       return collections.OrderedDict([
           (str(source.sequence.variant_tensor_name),
            str(target.sequence.variant_tensor_name)),
       ])
     else:
-      raise ValueError('Unsupported sequence binding {}'.format(sequence_oneof))
+      raise ValueError(f'Unsupported sequence binding {sequence_oneof}')
   elif source_oneof == 'struct':
     if len(source.struct.element) != len(target.struct.element):
       raise ValueError(
-          'Source and target binding tuple lengths mismatch: {} vs. {}.'.format(
-              len(source.struct.element), len(target.struct.element)))
-    else:
-      result = collections.OrderedDict()
-      for source_element, target_element in zip(source.struct.element,
-                                                target.struct.element):
-        result.update(compute_map_from_bindings(source_element, target_element))
-      return result
+          f'Source and target binding tuple lengths mismatch: {len(source.struct.element)} vs. {len(target.struct.element)}.'
+      )
+    result = collections.OrderedDict()
+    for source_element, target_element in zip(source.struct.element,
+                                              target.struct.element):
+      result.update(compute_map_from_bindings(source_element, target_element))
+    return result
   else:
-    raise ValueError('Unsupported type of binding \'{}\'.'.format(source_oneof))
+    raise ValueError(f"Unsupported type of binding \'{source_oneof}\'.")
 
 
 def extract_tensor_names_from_binding(binding):
@@ -386,15 +385,14 @@ def extract_tensor_names_from_binding(binding):
     if sequence_oneof == 'variant_tensor_name':
       return [str(binding.sequence.variant_tensor_name)]
     else:
-      raise ValueError('Unsupported sequence binding {}'.format(sequence_oneof))
+      raise ValueError(f'Unsupported sequence binding {sequence_oneof}')
   elif binding_oneof == 'struct':
     return list(
         itertools.chain.from_iterable([
             extract_tensor_names_from_binding(e) for e in binding.struct.element
         ]))
   else:
-    raise ValueError(
-        'Unsupported type of binding \'{}\'.'.format(binding_oneof))
+    raise ValueError(f"Unsupported type of binding \'{binding_oneof}\'.")
 
 
 def assemble_result_from_graph(type_spec, binding, output_map):
@@ -430,58 +428,52 @@ def assemble_result_from_graph(type_spec, binding, output_map):
     py_typecheck.check_type(k, str)
     if not tf.is_tensor(v):
       raise TypeError(
-          'Element with key {} in the output map is {}, not a tensor.'.format(
-              k, py_typecheck.type_string(type(v))))
+          f'Element with key {k} in the output map is {py_typecheck.type_string(type(v))}, not a tensor.'
+      )
 
   binding_oneof = binding.WhichOneof('binding')
   if type_spec.is_tensor():
     if binding_oneof != 'tensor':
-      raise ValueError(
-          'Expected a tensor binding, found {}.'.format(binding_oneof))
+      raise ValueError(f'Expected a tensor binding, found {binding_oneof}.')
     elif binding.tensor.tensor_name not in output_map:
-      raise ValueError('Tensor named {} not found in the output map.'.format(
-          binding.tensor.tensor_name))
+      raise ValueError(
+          f'Tensor named {binding.tensor.tensor_name} not found in the output map.'
+      )
     else:
       return output_map[binding.tensor.tensor_name]
   elif type_spec.is_struct():
     if binding_oneof != 'struct':
+      raise ValueError(f'Expected a struct binding, found {binding_oneof}.')
+    type_elements = structure.to_elements(type_spec)
+    if len(binding.struct.element) != len(type_elements):
       raise ValueError(
-          'Expected a struct binding, found {}.'.format(binding_oneof))
-    else:
-      type_elements = structure.to_elements(type_spec)
-      if len(binding.struct.element) != len(type_elements):
-        raise ValueError(
-            'Mismatching tuple sizes in type ({}) and binding ({}).'.format(
-                len(type_elements), len(binding.struct.element)))
-      result_elements = []
-      for (element_name,
-           element_type), element_binding in zip(type_elements,
-                                                 binding.struct.element):
-        element_object = assemble_result_from_graph(element_type,
-                                                    element_binding, output_map)
-        result_elements.append((element_name, element_object))
-      if type_spec.python_container is None:
-        return structure.Struct(result_elements)
-      container_type = type_spec.python_container
-      if (py_typecheck.is_named_tuple(container_type) or
-          py_typecheck.is_attrs(container_type)):
-        return container_type(**dict(result_elements))
-      return container_type(result_elements)
+          f'Mismatching tuple sizes in type ({len(type_elements)}) and binding ({len(binding.struct.element)}).'
+      )
+    result_elements = []
+    for (element_name,
+         element_type), element_binding in zip(type_elements,
+                                               binding.struct.element):
+      element_object = assemble_result_from_graph(element_type,
+                                                  element_binding, output_map)
+      result_elements.append((element_name, element_object))
+    if type_spec.python_container is None:
+      return structure.Struct(result_elements)
+    container_type = type_spec.python_container
+    if (py_typecheck.is_named_tuple(container_type) or
+        py_typecheck.is_attrs(container_type)):
+      return container_type(**dict(result_elements))
+    return container_type(result_elements)
   elif type_spec.is_sequence():
     if binding_oneof != 'sequence':
-      raise ValueError(
-          'Expected a sequence binding, found {}.'.format(binding_oneof))
-    else:
-      sequence_oneof = binding.sequence.WhichOneof('binding')
-      if sequence_oneof == 'variant_tensor_name':
-        variant_tensor = output_map[binding.sequence.variant_tensor_name]
-        return make_dataset_from_variant_tensor(variant_tensor,
-                                                type_spec.element)
-      else:
-        raise ValueError(
-            'Unsupported sequence binding \'{}\'.'.format(sequence_oneof))
+      raise ValueError(f'Expected a sequence binding, found {binding_oneof}.')
+    sequence_oneof = binding.sequence.WhichOneof('binding')
+    if sequence_oneof != 'variant_tensor_name':
+      raise ValueError(f"Unsupported sequence binding \'{sequence_oneof}\'.")
+    variant_tensor = output_map[binding.sequence.variant_tensor_name]
+    return make_dataset_from_variant_tensor(variant_tensor,
+                                            type_spec.element)
   else:
-    raise ValueError('Unsupported type \'{}\'.'.format(type_spec))
+    raise ValueError(f"Unsupported type \'{type_spec}\'.")
 
 
 def nested_structures_equal(x, y):
@@ -533,17 +525,15 @@ def make_empty_list_structure_for_element_type_spec(type_spec):
           for k, v in elements
       ])
     elif all(k is None for k, _ in elements):
-      return tuple([
+      return tuple(
           make_empty_list_structure_for_element_type_spec(v)
-          for _, v in elements
-      ])
+          for _, v in elements)
     else:
       raise TypeError(
-          'Expected a named tuple type with either all elements named or all '
-          'unnamed, got {}.'.format(type_spec))
+          f'Expected a named tuple type with either all elements named or all unnamed, got {type_spec}.'
+      )
   else:
-    raise TypeError(
-        'Expected a tensor or named tuple type, found {}.'.format(type_spec))
+    raise TypeError(f'Expected a tensor or named tuple type, found {type_spec}.')
 
 
 def make_whimsy_element_for_type_spec(type_spec, none_dim_replacement=0):
@@ -633,11 +623,11 @@ def append_to_list_structure_for_element_type_spec(nested, value, type_spec):
     if all(k is not None for k, _ in elements):
       value = collections.OrderedDict(elements)
     elif all(k is None for k, _ in elements):
-      value = tuple([v for _, v in elements])
+      value = tuple(v for _, v in elements)
     else:
       raise TypeError(
-          'Expected an anonymous tuple to either have all elements named or '
-          'all unnamed, got {}.'.format(value))
+          f'Expected an anonymous tuple to either have all elements named or all unnamed, got {value}.'
+      )
   if type_spec.is_tensor():
     py_typecheck.check_type(nested, list)
     # Convert the members to tensors to ensure that they are properly
@@ -652,37 +642,34 @@ def append_to_list_structure_for_element_type_spec(nested, value, type_spec):
         # a regular `dict`.
         value = collections.OrderedDict(value._asdict())
       if isinstance(value, dict):
-        if set(value.keys()) != set(k for k, _ in elements):
-          raise TypeError('Value {} does not match type {}.'.format(
-              value, type_spec))
+        if set(value.keys()) != {k for k, _ in elements}:
+          raise TypeError(f'Value {value} does not match type {type_spec}.')
         for elem_name, elem_type in elements:
           append_to_list_structure_for_element_type_spec(
               nested[elem_name], value[elem_name], elem_type)
       elif isinstance(value, (list, tuple)):
         if len(value) != len(elements):
-          raise TypeError('Value {} does not match type {}.'.format(
-              value, type_spec))
+          raise TypeError(f'Value {value} does not match type {type_spec}.')
         for idx, (elem_name, elem_type) in enumerate(elements):
           append_to_list_structure_for_element_type_spec(
               nested[elem_name], value[idx], elem_type)
       else:
-        raise TypeError('Unexpected type of value {} for TFF type {}.'.format(
-            py_typecheck.type_string(type(value)), type_spec))
+        raise TypeError(
+            f'Unexpected type of value {py_typecheck.type_string(type(value))} for TFF type {type_spec}.'
+        )
     elif isinstance(nested, tuple):
       py_typecheck.check_type(value, (list, tuple))
       if len(value) != len(elements):
-        raise TypeError('Value {} does not match type {}.'.format(
-            value, type_spec))
+        raise TypeError(f'Value {value} does not match type {type_spec}.')
       for idx, (_, elem_type) in enumerate(elements):
         append_to_list_structure_for_element_type_spec(nested[idx], value[idx],
                                                        elem_type)
     else:
       raise TypeError(
-          'Invalid nested structure, unexpected container type {}.'.format(
-              py_typecheck.type_string(type(nested))))
+          f'Invalid nested structure, unexpected container type {py_typecheck.type_string(type(nested))}.'
+      )
   else:
-    raise TypeError(
-        'Expected a tensor or named tuple type, found {}.'.format(type_spec))
+    raise TypeError(f'Expected a tensor or named tuple type, found {type_spec}.')
 
 
 def replace_empty_leaf_lists_with_numpy_arrays(lists, type_spec):
@@ -729,11 +716,10 @@ def replace_empty_leaf_lists_with_numpy_arrays(lists, type_spec):
       return tuple(to_return)
     else:
       raise TypeError(
-          'Invalid nested structure, unexpected container type {}.'.format(
-              py_typecheck.type_string(type(lists))))
+          f'Invalid nested structure, unexpected container type {py_typecheck.type_string(type(lists))}.'
+      )
   else:
-    raise TypeError(
-        'Expected a tensor or struct type, found {}.'.format(type_spec))
+    raise TypeError(f'Expected a tensor or struct type, found {type_spec}.')
 
 
 def make_data_set_from_elements(graph, elements, element_type):
@@ -782,7 +768,7 @@ def make_data_set_from_elements(graph, elements, element_type):
         lists, element_type)
     return tf.data.Dataset.from_tensor_slices(tensor_slices)
 
-  def _work():  # pylint: disable=missing-docstring
+  def _work():# pylint: disable=missing-docstring
     if not elements:
       # Just return an empty data set with the appropriate types.
       whimsy_element = make_whimsy_element_for_type_spec(element_type)
@@ -794,7 +780,7 @@ def make_data_set_from_elements(graph, elements, element_type):
         # It is common for the last element to be a batch of a size different
         # from all the preceding batches. With this in mind, we proactively
         # single out the last element (optimizing for the common case).
-        ds = _make(elements[0:-1]).concatenate(_make(elements[-1:]))
+        ds = _make(elements[:-1]).concatenate(_make(elements[-1:]))
       except ValueError:
         # In case elements beyond just the last one are of unequal shapes, we
         # may have failed (the most likely cause), so fall back onto the slow
@@ -875,7 +861,7 @@ def fetch_value_in_session(sess, value):
         raise ValueError('Unsupported value type {}.'.format(v))
     # Note that `flat_tensors` could be an empty tuple, but it could also be a
     # list of empty tuples.
-    if flat_tensors or any(x for x in flat_tensors):
+    if flat_tensors or any(flat_tensors):
       flat_computed_tensors = sess.run(flat_tensors)
     else:
       flat_computed_tensors = flat_tensors
@@ -883,9 +869,7 @@ def fetch_value_in_session(sess, value):
         dataset_results, flat_computed_tensors)
 
     def _to_unicode(v):
-      if isinstance(v, bytes):
-        return v.decode('utf-8')
-      return v
+      return v.decode('utf-8') if isinstance(v, bytes) else v
 
     if tf.is_tensor(value) and value.dtype == tf.string:
       flattened_results = [_to_unicode(result) for result in flattened_results]
@@ -921,10 +905,7 @@ def to_node_name(name):
   if name[0] == '^':
     name = name[1:]
   colon = name.rfind(':')
-  if colon >= 0:
-    return name[:colon]
-  else:
-    return name
+  return name[:colon] if colon >= 0 else name
 
 
 def get_deps_for_graph_node(graph_def, node_name):
@@ -940,11 +921,13 @@ def get_deps_for_graph_node(graph_def, node_name):
   """
   py_typecheck.check_type(graph_def, tf.compat.v1.GraphDef)
   py_typecheck.check_type(node_name, str)
-  input_map = {}
-  for node in graph_def.node:
-    input_map[node.name] = set(to_node_name(x) for x in node.input)
+  input_map = {
+      node.name: {to_node_name(x)
+                  for x in node.input}
+      for node in graph_def.node
+  }
   dependencies = set()
-  initial_singleton = set([node_name])
+  initial_singleton = {node_name}
   nodes_to_process = initial_singleton
   while nodes_to_process:
     dependencies.update(nodes_to_process)
@@ -967,9 +950,8 @@ def add_control_deps_for_init_op(graph_def, init_op):
   py_typecheck.check_type(graph_def, tf.compat.v1.GraphDef)
   py_typecheck.check_type(init_op, str)
   init_op_str = to_node_name(init_op)
-  init_op_control_dep = '^{}'.format(init_op_str)
-  deps = get_deps_for_graph_node(graph_def,
-                                 init_op_str).union(set([init_op_str]))
+  init_op_control_dep = f'^{init_op_str}'
+  deps = get_deps_for_graph_node(graph_def, init_op_str).union({init_op_str})
   new_graph_def = tf.compat.v1.GraphDef()
   new_graph_def.CopyFrom(graph_def)
   for new_node in new_graph_def.node:
@@ -1034,7 +1016,7 @@ def coerce_dataset_elements_to_tff_type_spec(dataset, element_type):
         return py_type(values)
     elif type_spec.is_struct():
       field_types = structure.to_elements(type_spec)
-      is_all_named = all([name is not None for name, _ in field_types])
+      is_all_named = all(name is not None for name, _ in field_types)
       if is_all_named:
         if py_typecheck.is_named_tuple(elements):
           values = collections.OrderedDict(
@@ -1103,7 +1085,7 @@ def deserialize_and_call_tf_computation(computation_proto, arg, graph):
   computation_oneof = computation_proto.WhichOneof('computation')
   if computation_oneof != 'tensorflow':
     raise ValueError(
-        'Expected a TensorFlow computation, got {}.'.format(computation_oneof))
+        f'Expected a TensorFlow computation, got {computation_oneof}.')
   py_typecheck.check_type(graph, tf.Graph)
   with graph.as_default():
     type_spec = type_serialization.deserialize_type(computation_proto.type)
@@ -1112,19 +1094,18 @@ def deserialize_and_call_tf_computation(computation_proto, arg, graph):
         input_map = None
       else:
         raise TypeError(
-            'The computation declared no parameters; encountered an unexpected '
-            'argument {}.'.format(arg))
+            f'The computation declared no parameters; encountered an unexpected argument {arg}.'
+        )
     elif arg is None:
       raise TypeError(
-          'The computation declared a parameter of type {}, but the argument '
-          'was not supplied.'.format(type_spec.parameter))
+          f'The computation declared a parameter of type {type_spec.parameter}, but the argument was not supplied.'
+      )
     else:
       arg_type, arg_binding = capture_result_from_graph(arg, graph)
       if not type_spec.parameter.is_assignable_from(arg_type):
         raise TypeError(
-            'The computation declared a parameter of type {}, but the argument '
-            'is of a mismatching type {}.'.format(type_spec.parameter,
-                                                  arg_type))
+            f'The computation declared a parameter of type {type_spec.parameter}, but the argument is of a mismatching type {arg_type}.'
+        )
       else:
         input_map = {
             k: graph.get_tensor_by_name(v)
@@ -1153,7 +1134,7 @@ def deserialize_and_call_tf_computation(computation_proto, arg, graph):
         # node names is less likely to be needed.
         name='subcomputation')
 
-    output_map = {k: v for k, v in zip(return_elements, output_tensors)}
+    output_map = dict(zip(return_elements, output_tensors))
     new_init_op_name = output_map.pop(orig_init_op_name, None)
     return (
         new_init_op_name,

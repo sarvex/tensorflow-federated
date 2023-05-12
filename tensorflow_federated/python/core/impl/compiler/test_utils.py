@@ -52,9 +52,8 @@ def create_chained_calls(functions, arg):
   for fn in functions:
     if not fn.parameter_type.is_assignable_from(arg.type_signature):
       raise TypeError(
-          'The parameter of the function is of type {}, and the argument is of '
-          'an incompatible type {}.'.format(
-              str(fn.parameter_type), str(arg.type_signature)))
+          f'The parameter of the function is of type {str(fn.parameter_type)}, and the argument is of an incompatible type {str(arg.type_signature)}.'
+      )
     call = building_blocks.Call(fn, arg)
     arg = call
   return call
@@ -447,9 +446,7 @@ def create_nested_syntax_tree():
                                              result)
   whimsy_lambda = building_blocks.Lambda('arg', tf.float32, whimsy_outer_block)
   whimsy_arg = building_blocks.Data('k', tf.float32)
-  called_lambda = building_blocks.Call(whimsy_lambda, whimsy_arg)
-
-  return called_lambda
+  return building_blocks.Call(whimsy_lambda, whimsy_arg)
 
 
 def _stamp_value_into_graph(value, type_signature, graph):
@@ -494,7 +491,7 @@ def _stamp_value_into_graph(value, type_signature, graph):
                                                         type_signature.element)
   else:
     raise NotImplementedError(
-        'Unable to stamp a value of type {} in graph.'.format(type_signature))
+        f'Unable to stamp a value of type {type_signature} in graph.')
 
 
 # TODO(b/139439722): Consolidate implementation to run a TF comp with an arg.

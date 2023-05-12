@@ -93,9 +93,8 @@ def select_graph_output(comp, name=None, index=None):
   binding_oneof = graph_result_binding.WhichOneof('binding')
   if binding_oneof != 'struct':
     raise TypeError(
-        'Can only select output from a CompiledComputation with return type '
-        'struct; you have attempted a selection from a CompiledComputation '
-        'with return type {}'.format(binding_oneof))
+        f'Can only select output from a CompiledComputation with return type struct; you have attempted a selection from a CompiledComputation with return type {binding_oneof}'
+    )
   comp_result_type = comp.type_signature.result
   py_typecheck.check_type(comp_result_type, computation_types.StructType)
   if name is not None:
@@ -187,9 +186,7 @@ def permute_graph_inputs(comp, input_permutation):
 
   original_parameter_type_elements = structure.to_elements(
       comp.type_signature.parameter)
-  original_parameter_bindings = [
-      x for x in graph_parameter_binding.struct.element
-  ]
+  original_parameter_bindings = list(graph_parameter_binding.struct.element)
 
   def _is_permutation(ls):
     #  Sorting since these shouldn't be long
@@ -394,33 +391,23 @@ def pad_graph_inputs_to_match_type(comp, type_signature):
   binding_oneof = graph_parameter_binding.WhichOneof('binding')
   if binding_oneof != 'struct':
     raise TypeError(
-        'Can only pad inputs of a CompiledComputation with parameter type '
-        'struct; you have attempted to pad a CompiledComputation '
-        'with parameter type {}'.format(binding_oneof))
+        f'Can only pad inputs of a CompiledComputation with parameter type struct; you have attempted to pad a CompiledComputation with parameter type {binding_oneof}'
+    )
   # This line provides protection against an improperly serialized proto
   py_typecheck.check_type(comp.type_signature.parameter,
                           computation_types.StructType)
-  parameter_bindings = [x for x in graph_parameter_binding.struct.element]
+  parameter_bindings = list(graph_parameter_binding.struct.element)
   parameter_type_elements = structure.to_elements(comp.type_signature.parameter)
   type_signature_elements = structure.to_elements(type_signature)
   if len(parameter_bindings) > len(type_signature):
-    raise ValueError('We can only pad graph input bindings, never mask them. '
-                     'This means that a proposed type signature passed to '
-                     '`pad_graph_inputs_to_match_type` must have more elements '
-                     'than the existing type signature of the compiled '
-                     'computation. You have proposed a type signature of '
-                     'length {} be assigned to a computation with parameter '
-                     'type signature of length {}.'.format(
-                         len(type_signature), len(parameter_bindings)))
+    raise ValueError(
+        f'We can only pad graph input bindings, never mask them. This means that a proposed type signature passed to `pad_graph_inputs_to_match_type` must have more elements than the existing type signature of the compiled computation. You have proposed a type signature of length {len(type_signature)} be assigned to a computation with parameter type signature of length {len(parameter_bindings)}.'
+    )
   if any(x[1] != type_signature_elements[idx][1]
          for idx, x in enumerate(parameter_type_elements)):
     raise TypeError(
-        'The existing elements of the parameter type signature '
-        'of the compiled computation in `pad_graph_inputs_to_match_type` '
-        'must match the beginning of the proposed new type signature; '
-        'you have proposed a parameter type of {} for a computation '
-        'with existing parameter type {}.'.format(
-            type_signature, comp.type_signature.parameter))
+        f'The existing elements of the parameter type signature of the compiled computation in `pad_graph_inputs_to_match_type` must match the beginning of the proposed new type signature; you have proposed a parameter type of {type_signature} for a computation with existing parameter type {comp.type_signature.parameter}.'
+    )
   g = tf.Graph()
   with g.as_default():
     tf.graph_util.import_graph_def(
@@ -429,10 +416,7 @@ def pad_graph_inputs_to_match_type(comp, type_signature):
   elems_to_stamp = structure.to_elements(
       type_signature)[len(parameter_bindings):]
   for name, type_spec in elems_to_stamp:
-    if name is None:
-      stamp_name = 'name'
-    else:
-      stamp_name = name
+    stamp_name = 'name' if name is None else name
     _, stamped_binding = tensorflow_utils.stamp_parameter_in_graph(
         stamp_name, type_spec, g)
     parameter_bindings.append(stamped_binding)
@@ -533,8 +517,7 @@ def _repack_binding_with_new_name(binding, name_map):
           sequence=pb.TensorFlow.SequenceBinding(variant_tensor_name=name_map[
               binding.sequence.variant_tensor_name]))
     else:
-      raise ValueError(
-          'Unsupported sequence binding \'{}\'.'.format(sequence_oneof))
+      raise ValueError(f"Unsupported sequence binding \'{sequence_oneof}\'.")
   else:
     raise TypeError
 
@@ -561,16 +544,16 @@ def _pack_concatenated_bindings(old_bindings, tensor_name_maps):
     lengths.
   """
   assert len(tensor_name_maps) == len(old_bindings)
-  remapped_bindings = []
-  for binding, name_map in zip(old_bindings, tensor_name_maps):
-    if binding.WhichOneof('binding') is not None:
-      remapped_bindings.append(_repack_binding_with_new_name(binding, name_map))
-  if not remapped_bindings:
+  if remapped_bindings := [
+      _repack_binding_with_new_name(binding, name_map)
+      for binding, name_map in zip(old_bindings, tensor_name_maps)
+      if binding.WhichOneof('binding') is not None
+  ]:
+    return (remapped_bindings[0]
+            if len(remapped_bindings) == 1 else pb.TensorFlow.Binding(
+                struct=pb.TensorFlow.StructBinding(element=remapped_bindings)))
+  else:
     return None
-  if len(remapped_bindings) == 1:
-    return remapped_bindings[0]
-  return pb.TensorFlow.Binding(
-      struct=pb.TensorFlow.StructBinding(element=remapped_bindings))
 
 
 def _construct_concatenated_type(type_list):
@@ -653,12 +636,9 @@ def concatenate_tensorflow_blocks(tf_comp_list, output_name_list):
   if len(tf_comp_list) == 1:
     return bind_graph_result_as_tuple(tf_comp_list[0], output_name_list[0])
   elif len(tf_comp_list) < 2:
-    raise ValueError('We expect to concatenate at least two blocks of '
-                     'TensorFlow; otherwise the transformation you seek '
-                     'represents simply type manipulation, and you will find '
-                     'your desired function elsewhere in '
-                     '`compiled_computation_transforms`. You passed a tuple of '
-                     'length {}'.format(len(tf_comp_list)))
+    raise ValueError(
+        f'We expect to concatenate at least two blocks of TensorFlow; otherwise the transformation you seek represents simply type manipulation, and you will find your desired function elsewhere in `compiled_computation_transforms`. You passed a tuple of length {len(tf_comp_list)}'
+    )
   if len(tf_comp_list) != len(output_name_list):
     raise ValueError('`tf_comp_list` and `output_name_list` hav different '
                      'lengths; `concatenate_tensorflow_blocks` must be given '
@@ -781,14 +761,12 @@ def compose_tensorflow_blocks(tf_comps):
   previous_param_type = None
   for comp in tf_comps:
     py_typecheck.check_type(comp, building_blocks.CompiledComputation)
-    if previous_param_type is not None:
-      if not previous_param_type.is_assignable_from(comp.type_signature.result):
-        raise TypeError('The result type of computation k should match the '
-                        'parameter type of computation k-1 in `tf_comps`, '
-                        'as we are attempting to compose; we have encountered '
-                        'a result of type {} attempting to match a parameter '
-                        'of type {}'.format(comp.type_signature.result,
-                                            previous_param_type))
+    if (previous_param_type is not None
+        and not previous_param_type.is_assignable_from(
+            comp.type_signature.result)):
+      raise TypeError(
+          f'The result type of computation k should match the parameter type of computation k-1 in `tf_comps`, as we are attempting to compose; we have encountered a result of type {comp.type_signature.result} attempting to match a parameter of type {previous_param_type}'
+      )
     previous_param_type = comp.type_signature.parameter
     tf_protos.append(comp.proto)
 
@@ -876,13 +854,13 @@ class LambdaWrappingNoArgGraph(transformation_utils.TransformSpec):
 
     _, param_binding = tensorflow_utils.stamp_parameter_in_graph(
         'unused_param', arg_type, g)
-    out_name_map = dict((x, rebind_name + '/' + x) for x in tf_spec.out_names)
+    out_name_map = {x: f'{rebind_name}/{x}' for x in tf_spec.out_names}
     rebound_result = _repack_binding_with_new_name(
         tf_block.proto.tensorflow.result, out_name_map)
     graph_def = serialization_utils.pack_graph_def(g.as_graph_def())
 
     if tf_spec.init_op is not None:
-      init_op = rebind_name + '/' + tf_spec.init_op
+      init_op = f'{rebind_name}/{tf_spec.init_op}'
     else:
       init_op = None
     tf_result_proto = pb.TensorFlow(
@@ -1100,17 +1078,16 @@ class StructCalledGraphs(transformation_utils.TransformSpec):
     self._only_equal_args = only_equal_args
 
   def should_transform(self, comp):
-    if not (comp.is_struct() and all(
-        (x.is_call() and x.function.is_compiled_computation()) for x in comp)):
+    if not comp.is_struct() or not all(
+        (x.is_call() and x.function.is_compiled_computation()) for x in comp):
       return False
     if not self._only_equal_args:
       return True
-    else:
-      if len(comp) == 0:  # pylint: disable=g-explicit-length-test
-        return False
-      arg_generator = (x.argument for x in comp)
-      first_arg = next(arg_generator)
-      return all(tree_analysis.trees_equal(x, first_arg) for x in arg_generator)
+    if len(comp) == 0:  # pylint: disable=g-explicit-length-test
+      return False
+    arg_generator = (x.argument for x in comp)
+    first_arg = next(arg_generator)
+    return all(tree_analysis.trees_equal(x, first_arg) for x in arg_generator)
 
   def transform(self, comp):
     if not self.should_transform(comp):
@@ -1164,15 +1141,11 @@ def _construct_padding(list_of_indices, tuple_type):
     elements of `tuple_type` in order.
   """
   type_elements = structure.to_elements(tuple_type)
-  existing_type = []
-  for i in list_of_indices:
-    existing_type.append(type_elements[i])
+  existing_type = [type_elements[i] for i in list_of_indices]
   type_padding_remaining = [
       x for i, x in enumerate(type_elements) if i not in list_of_indices
   ]
-  how_to_pad = computation_types.StructType(existing_type +
-                                            type_padding_remaining)
-  return how_to_pad
+  return computation_types.StructType(existing_type + type_padding_remaining)
 
 
 def _construct_permutation(list_of_indices, tuple_type):
@@ -1201,10 +1174,9 @@ def _construct_permutation(list_of_indices, tuple_type):
     index_positions_after_padding.pop(
         index_positions_after_padding.index(type_index))
     index_positions_after_padding.insert(idx, type_index)
-  how_to_permute = [
+  return [
       index_positions_after_padding.index(k) for k in range(length_of_type)
   ]
-  return how_to_permute
 
 
 def _remap_graph_inputs(graph, list_of_indices, tuple_type):
@@ -1285,10 +1257,9 @@ def _remap_graph_inputs(graph, list_of_indices, tuple_type):
   if len(set(list_of_indices)) != len(list_of_indices):
     raise ValueError('Support for repeated indices is not yet implemented.')
   if not all(k < tuple_type_len and k >= 0 for k in list_of_indices):
-    raise ValueError('list_of_indices must contain only indices between 0 and '
-                     'the length of tuple_type; tuple_type here is of length '
-                     '{}, and you have asked for the indices {}'.format(
-                         tuple_type_len, list_of_indices))
+    raise ValueError(
+        f'list_of_indices must contain only indices between 0 and the length of tuple_type; tuple_type here is of length {tuple_type_len}, and you have asked for the indices {list_of_indices}'
+    )
   to_pad = _construct_padding(list_of_indices, tuple_type)
   permutation = _construct_permutation(list_of_indices, tuple_type)
   graph_with_appended_inputs = pad_graph_inputs_to_match_type(graph, to_pad)

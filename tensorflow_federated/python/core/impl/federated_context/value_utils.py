@@ -40,9 +40,10 @@ def get_curried(fn):
   fn.type_signature.check_function()
   fn.type_signature.parameter.check_struct()
   param_elements = structure.to_elements(fn.type_signature.parameter)
-  references = []
-  for idx, (_, elem_type) in enumerate(param_elements):
-    references.append(building_blocks.Reference('arg{}'.format(idx), elem_type))
+  references = [
+      building_blocks.Reference(f'arg{idx}', elem_type)
+      for idx, (_, elem_type) in enumerate(param_elements)
+  ]
   result = building_blocks.Call(fn.comp, building_blocks.Struct(references))
   for ref in references[::-1]:
     result = building_blocks.Lambda(ref.name, ref.type_signature, result)
@@ -87,8 +88,7 @@ def ensure_federated_value(value, placement=None, label=None):
 
   if placement and value.type_signature.placement is not placement:
     raise TypeError(
-        'The {} should be placed at {}, but it is placed at {}.'.format(
-            label if label else 'value', placement,
-            value.type_signature.placement))
+        f"The {label if label else 'value'} should be placed at {placement}, but it is placed at {value.type_signature.placement}."
+    )
 
   return value

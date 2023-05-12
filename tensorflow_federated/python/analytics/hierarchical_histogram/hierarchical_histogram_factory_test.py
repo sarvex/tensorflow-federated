@@ -253,10 +253,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
   )
   def test_no_noise_tree_aggregation_wo_clip(self, value_shape, num_clients,
                                              arity, clip_mechanism):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,
@@ -288,10 +287,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
   def test_no_noise_tree_aggregation_w_clip(self, value_shape, num_clients,
                                             arity, clip_mechanism,
                                             max_records_per_user):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,
@@ -328,10 +326,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
                                                      num_clients, arity,
                                                      clip_mechanism,
                                                      noise_multiplier):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,
@@ -369,10 +366,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
                                                     clip_mechanism,
                                                     max_records_per_user,
                                                     noise_multiplier):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,
@@ -413,10 +409,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
   )
   def test_distributed_discrete_gaussian_tree_aggregation_wo_clip(
       self, value_shape, num_clients, arity, clip_mechanism, noise_multiplier):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,
@@ -452,10 +447,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
   def test_distributed_discrete_gaussian_tree_aggregation_w_clip(
       self, value_shape, num_clients, arity, clip_mechanism,
       max_records_per_user, noise_multiplier):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,
@@ -494,10 +488,9 @@ class TreeAggregationFactoryExecutionTest(test_case.TestCase,
   )
   def test_distributed_discrete_gaussian_tree_aggregation_no_overflow(
       self, value_shape, num_clients, arity):
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.zeros(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.zeros(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     agg_factory = hihi_factory.create_hierarchical_histogram_aggregation_factory(
         num_bins=value_shape,
         arity=arity,

@@ -64,7 +64,7 @@ def check_string(filename: str, value: str):
   # Append a newline to the end of `value` to work around lint against
   # text files with no trailing newline.
   if not value.endswith('\n'):
-    value = value + '\n'
+    value += '\n'
   golden_path = _filename_to_golden_path(filename)
   if FLAGS.update_goldens:
     with open(golden_path, 'w') as f:
@@ -101,9 +101,7 @@ def traceback_string(exc_type, exc_value, tb) -> str:
   # Then also in class paths.
   without_classpath = re.sub(r'(\S*\.)+?(?=tensorflow_federated)', '',
                              without_filepath)
-  # Strip line numbers to avoid churn
-  without_linenumber = re.sub(r', line \d*', '', without_classpath)
-  return without_linenumber
+  return re.sub(r', line \d*', '', without_classpath)
 
 
 def check_raises_traceback(filename: str,

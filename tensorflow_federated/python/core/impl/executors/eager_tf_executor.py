@@ -189,13 +189,14 @@ def _call_embedded_tf(*, arg, param_fns, result_fns, result_type, wrapped_fn,
   param_elements = []
   if arg is not None:
     with tracing.span(
-        'EagerTFExecutor.create_call', 'arg_ingestion', span=True):
+            'EagerTFExecutor.create_call', 'arg_ingestion', span=True):
       arg_parts = structure.flatten(arg)
       if len(arg_parts) != len(param_fns):
-        raise RuntimeError('Expected {} arguments, found {}.'.format(
-            len(param_fns), len(arg_parts)))
-      for arg_part, param_fn in zip(arg_parts, param_fns):
-        param_elements.append(param_fn(arg_part))
+        raise RuntimeError(
+            f'Expected {len(param_fns)} arguments, found {len(arg_parts)}.')
+      param_elements.extend(
+          param_fn(arg_part)
+          for arg_part, param_fn in zip(arg_parts, param_fns))
   result_parts = wrapped_fn(*param_elements)
 
   # There is a tf.wrap_function(...) issue b/144127474 that variables created
@@ -212,9 +213,10 @@ def _call_embedded_tf(*, arg, param_fns, result_fns, result_type, wrapped_fn,
       tf.raw_ops.DestroyResourceOp(resource=resource)
 
   with tracing.span('EagerTFExecutor.create_call', 'result_packing', span=True):
-    result_elements = []
-    for result_part, result_fn in zip(result_parts, result_fns):
-      result_elements.append(result_fn(result_part))
+    result_elements = [
+        result_fn(result_part)
+        for result_part, result_fn in zip(result_parts, result_fns)
+    ]
     return structure.pack_sequence_as(result_type, result_elements)
 
 
@@ -400,17 +402,16 @@ def _to_struct_internal_rep(
   value_iterator = structure.iter_elements(value_struct)
 
   if len(type_spec) != len(value_struct):
-    raise TypeError('Mismatched number of elements between type spec and value '
-                    'in `to_representation_for_type`. Type spec has {} '
-                    'elements, value has {}.'.format(
-                        len(type_spec), len(value_struct)))
+    raise TypeError(
+        f'Mismatched number of elements between type spec and value in `to_representation_for_type`. Type spec has {len(type_spec)} elements, value has {len(value_struct)}.'
+    )
   result_elem = []
   for (type_name, elem_type), (val_name,
                                elem_val) in zip(type_iterator, value_iterator):
     if val_name is not None and type_name != val_name:
       raise TypeError(
-          'Mismatching element names in type vs. value: {} vs. {}.'.format(
-              type_name, val_name))
+          f'Mismatching element names in type vs. value: {type_name} vs. {val_name}.'
+      )
     elem_repr = to_representation_for_type(elem_val, tf_function_cache,
                                            elem_type, device)
     result_elem.append((type_name, elem_repr))
@@ -430,8 +431,8 @@ def _to_tensor_internal_rep(*, value: Any,
       computation_types.TensorType(value.dtype.base_dtype, value.shape))
   if not type_spec.is_assignable_from(value_type):
     raise TypeError(
-        'The apparent type {} of a tensor {} does not match the expected '
-        'type {}.'.format(value_type, value, type_spec))
+        f'The apparent type {value_type} of a tensor {value} does not match the expected type {type_spec}.'
+    )
   return value
 
 
@@ -681,8 +682,7 @@ class EagerTFExecutor(executor_base.Executor):
     if arg is not None:
       py_typecheck.check_type(arg, EagerValue)
     if not comp.type_signature.is_function():
-      raise TypeError('Expected a functional type, found {}'.format(
-          comp.type_signature))
+      raise TypeError(f'Expected a functional type, found {comp.type_signature}')
     if comp.type_signature.parameter is not None:
       return EagerValue(
           comp.internal_representation(arg.internal_representation),

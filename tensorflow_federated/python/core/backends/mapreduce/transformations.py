@@ -87,35 +87,22 @@ def check_extraction_result(before_extraction, extracted):
   if before_extraction.type_signature.is_function():
     if not extracted.is_compiled_computation():
       raise MapReduceFormCompilationError(
-          'We expect to parse down to a `building_blocks.CompiledComputation`, '
-          'since we have the functional type {} after unwrapping placement. '
-          'Instead we have the computation {} of type {}'.format(
-              before_extraction.type_signature, extracted,
-              extracted.type_signature))
+          f'We expect to parse down to a `building_blocks.CompiledComputation`, since we have the functional type {before_extraction.type_signature} after unwrapping placement. Instead we have the computation {extracted} of type {extracted.type_signature}'
+      )
   else:
     if not extracted.is_call():
       raise MapReduceFormCompilationError(
-          'We expect to parse down to a `building_blocks.Call`, since we have '
-          'the non-functional type {} after unwrapping placement. Instead we '
-          'have the computation {} of type {}'.format(
-              before_extraction.type_signature, extracted,
-              extracted.type_signature))
+          f'We expect to parse down to a `building_blocks.Call`, since we have the non-functional type {before_extraction.type_signature} after unwrapping placement. Instead we have the computation {extracted} of type {extracted.type_signature}'
+      )
     if not extracted.function.is_compiled_computation():
       raise MapReduceFormCompilationError(
-          'We expect to parse a computation of the non-functional type {} down '
-          'to a called TensorFlow block. Instead we hav a call to the '
-          'computation {} of type {}. This likely means that we the '
-          'computation {} represents a case the Tff-to-TF parser is missing.'
-          .format(before_extraction.type_signature, extracted.function,
-                  extracted.function.type_signature, before_extraction))
+          f'We expect to parse a computation of the non-functional type {before_extraction.type_signature} down to a called TensorFlow block. Instead we hav a call to the computation {extracted.function} of type {extracted.function.type_signature}. This likely means that we the computation {before_extraction} represents a case the Tff-to-TF parser is missing.'
+      )
   if not before_extraction.type_signature.is_equivalent_to(
       extracted.type_signature):
     raise MapReduceFormCompilationError(
-        'We have extracted a TensorFlow block of the correct Python type, but '
-        'incorrect TFF type signature. Before extraction, we had a TFF '
-        'object of type signature {}, but after extraction, we have instead '
-        'a TFF object of type signature {}'.format(
-            before_extraction.type_signature, extracted.type_signature))
+        f'We have extracted a TensorFlow block of the correct Python type, but incorrect TFF type signature. Before extraction, we had a TFF object of type signature {before_extraction.type_signature}, but after extraction, we have instead a TFF object of type signature {extracted.type_signature}'
+    )
 
 
 def consolidate_and_extract_local_processing(comp, grappler_config_proto):

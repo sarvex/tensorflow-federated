@@ -48,7 +48,7 @@ class PlacementLiteral(object):
     return self._name
 
   def __repr__(self):
-    return 'PlacementLiteral(\'{}\')'.format(self._uri)
+    return f"PlacementLiteral(\'{self._uri}\')"
 
   def __eq__(self, other):
     if self is other:
@@ -95,4 +95,4 @@ def uri_to_placement_literal(uri):
   for literal in [CLIENTS, SERVER]:
     if uri == literal.uri:
       return literal
-  raise ValueError('There is no known literal with uri \'{}\'.'.format(uri))
+  raise ValueError(f"There is no known literal with uri \'{uri}\'.")

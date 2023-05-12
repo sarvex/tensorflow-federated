@@ -39,7 +39,7 @@ class GoldenTest(absltest.TestCase):
     try:
       with open(golden_path, 'w') as f:
         f.write(old_contents)
-    except (OSError, PermissionError):
+    except OSError:
       # We're running without `--test_strategy=local`, and so can't test
       # updates properly because these files are read-only.
       return

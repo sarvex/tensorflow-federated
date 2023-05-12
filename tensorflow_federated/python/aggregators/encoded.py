@@ -156,9 +156,8 @@ def _encoded_init_fn(encoders):
   """
   init_fn_tf = computations.tf_computation(
       lambda: tf.nest.map_structure(lambda e: e.initial_state(), encoders))
-  init_fn = computations.federated_computation(
+  return computations.federated_computation(
       lambda: intrinsics.federated_eval(init_fn_tf, placements.SERVER))
-  return init_fn
 
 
 def _encoded_next_fn(server_state_type, value_type, encoders):
@@ -224,7 +223,7 @@ def _encoded_next_fn(server_state_type, value_type, encoders):
     return part_decoded_x, one
 
   # ...however, result type is needed to build the subsequent tf_compuations.
-  @computations.tf_computation(encode_fn.type_signature.result[0:2])
+  @computations.tf_computation(encode_fn.type_signature.result[:2])
   def tmp_decode_before_sum_fn(encoded_x, decode_before_sum_params):
     return decode_before_sum_tf_function(encoded_x, decode_before_sum_params)
 
@@ -353,7 +352,7 @@ def _accmulate_state_update_tensor(a, b, mode):
     raise NotImplementedError(
         'StateAggregationMode.STACK is not supported yet.')
   else:
-    raise ValueError('Not supported state aggregation mode: %s' % mode)
+    raise ValueError(f'Not supported state aggregation mode: {mode}')
 
 
 def _check_threshold(threshold):

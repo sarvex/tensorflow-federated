@@ -108,12 +108,12 @@ class SequenceExecutorTest(absltest.TestCase):
     self.assertEqual(str(result), '<a=10,b=20>')
 
   def test_create_struct(self):
-    elements = []
-    for x in [10, 20]:
-      elements.append(('v{}'.format(x),
-                       _run_sync(
-                           self._sequence_executor.create_value(
-                               x, computation_types.TensorType(tf.int32)))))
+    elements = [(
+        f'v{x}',
+        _run_sync(
+            self._sequence_executor.create_value(
+                x, computation_types.TensorType(tf.int32))),
+    ) for x in [10, 20]]
     elements = structure.Struct(elements)
     val = _run_sync(self._sequence_executor.create_struct(elements))
     self.assertIsInstance(val, sequence_executor.SequenceExecutorValue)

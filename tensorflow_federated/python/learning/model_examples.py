@@ -324,8 +324,8 @@ def build_conv_batch_norm_keras_model():
   max_pool = l.MaxPooling2D((2, 2), (2, 2),
                             padding='same',
                             data_format=data_format)
-  keras_model = tf.keras.models.Sequential([
-      l.Reshape(target_shape=[28, 28, 1], input_shape=(28 * 28,)),
+  return tf.keras.models.Sequential([
+      l.Reshape(target_shape=[28, 28, 1], input_shape=(28 * 28, )),
       l.Conv2D(
           32,
           5,
@@ -333,7 +333,8 @@ def build_conv_batch_norm_keras_model():
           data_format=data_format,
           activation=tf.nn.relu,
           kernel_initializer='zeros',
-          bias_initializer='zeros'),
+          bias_initializer='zeros',
+      ),
       max_pool,
       l.BatchNormalization(),
       l.Conv2D(
@@ -343,7 +344,8 @@ def build_conv_batch_norm_keras_model():
           data_format=data_format,
           activation=tf.nn.relu,
           kernel_initializer='zeros',
-          bias_initializer='zeros'),
+          bias_initializer='zeros',
+      ),
       max_pool,
       l.BatchNormalization(),
       l.Flatten(),
@@ -351,11 +353,11 @@ def build_conv_batch_norm_keras_model():
           1024,
           activation=tf.nn.relu,
           kernel_initializer='zeros',
-          bias_initializer='zeros'),
+          bias_initializer='zeros',
+      ),
       l.Dropout(0.4),
       l.Dense(10, kernel_initializer='zeros', bias_initializer='zeros'),
   ])
-  return keras_model
 
 
 def build_multiple_inputs_keras_model():

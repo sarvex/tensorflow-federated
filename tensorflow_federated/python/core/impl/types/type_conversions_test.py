@@ -230,7 +230,7 @@ class InferTypeTest(parameterized.TestCase, test_case.TestCase):
 
   def test_with_nested_dataset_list_tuple(self):
     t = type_conversions.infer_type(
-        tuple([(tf.data.Dataset.from_tensors(x),) for x in [1, True, [0.5]]]))
+        tuple((tf.data.Dataset.from_tensors(x), ) for x in [1, True, [0.5]]))
     self.assertEqual(str(t), '<<int32*>,<bool*>,<float32[1]*>>')
     self.assertIsInstance(t, computation_types.StructWithPythonType)
     self.assertIs(t.python_container, tuple)

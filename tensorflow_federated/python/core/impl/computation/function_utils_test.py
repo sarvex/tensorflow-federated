@@ -140,7 +140,6 @@ class FunctionUtilsTest(test_case.TestCase, parameterized.TestCase):
           [[], [1], [1, 2], [1, 2, 3], [1, 2, 3, 4]],
           # Values of 'kwargs' to test.
           [{}, {'b': 100}, {'name': 'foo'}, {'b': 100, 'name': 'foo'}]))
-  # pyformat: enable
   def test_get_callargs_for_signature(self, fn, args, kwargs):
     signature = function_utils.get_signature(fn)
     expected_error = None
@@ -152,8 +151,8 @@ class FunctionUtilsTest(test_case.TestCase, parameterized.TestCase):
       expected_error = e
       expected_callargs = None
 
-    result_callargs = None
     if expected_error is None:
+      result_callargs = None
       try:
         bound_args = signature.bind(*args, **kwargs).arguments
         self.assertEqual(bound_args, expected_callargs)
@@ -381,14 +380,17 @@ class PolymorphicComputationTest(test_case.TestCase):
 
   def test_call_returns_result(self):
 
+
+
+
     class TestContext(context_base.Context):
 
       def ingest(self, val, type_spec):
         return val
 
       def invoke(self, comp, arg):
-        return 'name={},type={},arg={},unpack={}'.format(
-            comp.name, comp.type_signature.parameter, arg, comp.unpack)
+        return f'name={comp.name},type={comp.type_signature.parameter},arg={arg},unpack={comp.unpack}'
+
 
     class TestContextStack(context_stack_base.ContextStack):
 

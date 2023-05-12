@@ -222,13 +222,13 @@ class TracingExecutor(executor_base.Executor):
                                          target_val)
       self._trace.append(
           ('create_call', comp.index, arg.index, wrapped_val.index))
-      return wrapped_val
     else:
       target_val = await self._target.create_call(comp.value)
       wrapped_val = TracingExecutorValue(self, self._get_new_value_index(),
                                          target_val)
       self._trace.append(('create_call', comp.index, wrapped_val.index))
-      return wrapped_val
+
+    return wrapped_val
 
   async def create_struct(self, elements):
     target_val = await self._target.create_struct(

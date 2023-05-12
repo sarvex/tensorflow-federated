@@ -742,7 +742,7 @@ class SecureQuantizedSumTest(tf.test.TestCase, parameterized.TestCase):
     self.assertLessEqual(np.abs(result_0 - 0), 1)
     self.assertLessEqual(np.abs(result_1 - 1), 1)
     self.assertLessEqual(np.abs(result_2 - 2), 1)
-    self.assertLen(set((result_0, result_1, result_2)), 2)
+    self.assertLen({result_0, result_1, result_2}, 2)
 
     result = call_secure_sum([-2**32 + 1, 2**32 - 2])
     # Each element can be represented incorrectly up to accuracy of 1.

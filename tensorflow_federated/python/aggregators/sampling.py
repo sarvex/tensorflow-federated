@@ -225,19 +225,17 @@ def _build_sample_value_computation(
         shape=(1,), minval=None, seed=seed, dtype=tf.int32)
     new_seed = tf.stack(
         [seed[0], tf.squeeze(tf.cast(sample_random_value, tf.int64))])
-    # If the reservoir isn't full, add the sample.
     if tf.less(tf.size(reservoir['random_values']), sample_size):
       return add_sample(reservoir, new_seed, sample_random_value, sample)
-    else:
-      # Determine if the random value for this sample belongs in the reservoir:
-      # random value larger than the smallest see so far. Or if the sample
-      # should be discarded: its random value is smaller than the smallest we've
-      # already seen.
-      min_reservoir_value = tf.reduce_min(reservoir['random_values'])
-      if sample_random_value < min_reservoir_value:
-        return collections.OrderedDict(reservoir, random_seed=new_seed)
-      reservoir = pop_one_minimum_value(reservoir)
-      return add_sample(reservoir, new_seed, sample_random_value, sample)
+    # Determine if the random value for this sample belongs in the reservoir:
+    # random value larger than the smallest see so far. Or if the sample
+    # should be discarded: its random value is smaller than the smallest we've
+    # already seen.
+    min_reservoir_value = tf.reduce_min(reservoir['random_values'])
+    if sample_random_value < min_reservoir_value:
+      return collections.OrderedDict(reservoir, random_seed=new_seed)
+    reservoir = pop_one_minimum_value(reservoir)
+    return add_sample(reservoir, new_seed, sample_random_value, sample)
 
   return perform_sampling
 

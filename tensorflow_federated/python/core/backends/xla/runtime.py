@@ -47,7 +47,7 @@ def normalize_tensor_representation(value, type_spec):
     return np.dtype(type_spec.dtype.as_numpy_dtype).type(value)
   if type_spec.shape.rank > 0:
     return np.array(value, dtype=type_spec.dtype.as_numpy_dtype)
-  raise TypeError('Unsupported tensor shape {}.'.format(type_spec.shape))
+  raise TypeError(f'Unsupported tensor shape {type_spec.shape}.')
 
 
 def _binding_to_tensor_indexes(binding):
@@ -73,7 +73,7 @@ def _binding_to_tensor_indexes(binding):
     for element in binding.struct.element:
       tensor_indexes += _binding_to_tensor_indexes(element)
     return tensor_indexes
-  raise ValueError('Unknown kind of binding {}.'.format(kind))
+  raise ValueError(f'Unknown kind of binding {kind}.')
 
 
 class ComputationCallable(typed_object.TypedObject):
@@ -103,8 +103,7 @@ class ComputationCallable(typed_object.TypedObject):
     py_typecheck.check_type(backend, xla_client.Client)
     which_computation = comp_pb.WhichOneof('computation')
     if which_computation != 'xla':
-      raise ValueError(
-          'Unsupported computation type: {}'.format(which_computation))
+      raise ValueError(f'Unsupported computation type: {which_computation}')
     xla_comp = xla_serialization.unpack_xla_computation(comp_pb.xla.hlo_module)
     compile_options = xla_client.CompileOptions()
     compile_options.parameter_is_tupled_arguments = True
@@ -138,12 +137,12 @@ class ComputationCallable(typed_object.TypedObject):
       raise ValueError('Not expecting more than one positional argument.')
     param_type = self.type_signature.parameter
     if param_type is None:
-      if len(args) > 0:  # pylint: disable=g-explicit-length-test
+      if args:  # pylint: disable=g-explicit-length-test
         raise ValueError('Not expecting any arguments.')
       else:
         flat_py_args = []
     else:
-      if len(args) == 0:  # pylint: disable=g-explicit-length-test
+      if not args:  # pylint: disable=g-explicit-length-test
         raise ValueError('Positional argument missing.')
       positional_arg = args[0]
       if isinstance(param_type, computation_types.TensorType):
@@ -164,7 +163,7 @@ class ComputationCallable(typed_object.TypedObject):
     result_type = self.type_signature.result
     if isinstance(result_type, computation_types.TensorType):
       if len(result) != 1:
-        raise ValueError('Expected one result, found {}.'.format(len(result)))
+        raise ValueError(f'Expected one result, found {len(result)}.')
       return normalize_tensor_representation(result[0], result_type)
     else:
       py_typecheck.check_type(result_type, computation_types.StructType)

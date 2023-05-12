@@ -77,9 +77,9 @@ def to_representation_for_type(value, type_spec=None, backend=None):
     elif type_spec.shape.rank > 0:
       return np.array(value, dtype=type_spec.dtype.as_numpy_dtype)
     else:
-      raise TypeError('Unsupported tensor shape {}.'.format(type_spec.shape))
+      raise TypeError(f'Unsupported tensor shape {type_spec.shape}.')
   else:
-    raise TypeError('Unexpected type {}.'.format(type_spec))
+    raise TypeError(f'Unexpected type {type_spec}.')
 
 
 class IreeValue(executor_value_base.ExecutorValue):

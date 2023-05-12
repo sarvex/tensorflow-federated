@@ -43,15 +43,13 @@ def _create_test_cnn_model():
       data_format=data_format,
       activation=tf.nn.relu)
 
-  model = tf.keras.models.Sequential([
+  return tf.keras.models.Sequential([
       conv2d(filters=32, input_shape=input_shape),
       max_pool(),
       tf.keras.layers.Flatten(),
       tf.keras.layers.Dense(10),
       tf.keras.layers.Activation(tf.nn.softmax),
   ])
-
-  return model
 
 
 def _create_random_batch():

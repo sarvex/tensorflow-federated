@@ -596,7 +596,7 @@ class ToTypeTest(absltest.TestCase):
     self.assertEqual(str(t), '<int32[1],<x=float32[2],bool[3]>>')
 
   def test_namedtuple_elements_two_tuples(self):
-    elems = [tf.int32 for k in range(10)]
+    elems = [tf.int32 for _ in range(10)]
     t = computation_types.to_type(elems)
     self.assertIsInstance(t, computation_types.StructWithPythonType)
     self.assertIs(t.python_container, list)
@@ -604,7 +604,7 @@ class ToTypeTest(absltest.TestCase):
       self.assertLen(k, 2)
 
   def test_namedtuples_addressable_by_name(self):
-    elems = [('item' + str(k), tf.int32) for k in range(5)]
+    elems = [(f'item{str(k)}', tf.int32) for k in range(5)]
     t = computation_types.to_type(elems)
     # Note: list of pairs should be interpreted as a plain StructType, and
     # not try to convert into a python list afterwards.
@@ -613,7 +613,7 @@ class ToTypeTest(absltest.TestCase):
     self.assertEqual(t.item0, t[0])
 
   def test_namedtuple_unpackable(self):
-    elems = [('item' + str(k), tf.int32) for k in range(2)]
+    elems = [(f'item{str(k)}', tf.int32) for k in range(2)]
     t = computation_types.to_type(elems)
     a, b = t
     self.assertIsInstance(a, computation_types.TensorType)

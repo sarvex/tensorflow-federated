@@ -78,9 +78,8 @@ def _wrap_concrete(fn_name: Optional[str],
   if (result_parameter_type is not None and
       not result_parameter_type.is_equivalent_to(parameter_type)):
     raise TypeError(
-        'Expected a concrete function that takes parameter {}, got one '
-        'that takes {}.'.format(
-            str(parameter_type), str(concrete_fn.type_signature.parameter)))
+        f'Expected a concrete function that takes parameter {str(parameter_type)}, got one that takes {str(concrete_fn.type_signature.parameter)}.'
+    )
   yield concrete_fn
 
 
@@ -103,8 +102,7 @@ def _parameter_type(
           f'Function with {len(parameters)} parameters must have a parameter '
           f'type with the same number of parameters. Found parameter type '
           f'{parameter_type}.')
-    name_list_from_types = structure.name_list(parameter_type)
-    if name_list_from_types:
+    if name_list_from_types := structure.name_list(parameter_type):
       if len(name_list_from_types) != len(parameter_type):
         raise TypeError(
             'Types with both named and unnamed fields cannot be unpacked into '

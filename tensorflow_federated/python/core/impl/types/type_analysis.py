@@ -50,10 +50,7 @@ def count(type_signature: computation_types.Type,
 def contains(type_signature: computation_types.Type,
              predicate: _TypePredicate) -> bool:
   """Checks if `type_signature` contains any types that pass `predicate`."""
-  for t in _preorder_types(type_signature):
-    if predicate(t):
-      return True
-  return False
+  return any(predicate(t) for t in _preorder_types(type_signature))
 
 
 def contains_federated_types(type_signature):
@@ -89,8 +86,8 @@ def check_type(value: Any, type_spec: computation_types.Type):
   value_type = type_conversions.infer_type(value)
   if not type_spec.is_assignable_from(value_type):
     raise TypeError(
-        'Expected TFF type {}, which is not assignable from {}.'.format(
-            type_spec, value_type))
+        f'Expected TFF type {type_spec}, which is not assignable from {value_type}.'
+    )
 
 
 def is_tensorflow_compatible_type(type_spec):
@@ -108,8 +105,8 @@ def is_structure_of_tensors(type_spec):
 def check_tensorflow_compatible_type(type_spec):
   if not is_tensorflow_compatible_type(type_spec):
     raise TypeError(
-        'Expected type to be compatible with TensorFlow (i.e. tensor, '
-        'sequence, or tuple types), found {}.'.format(type_spec))
+        f'Expected type to be compatible with TensorFlow (i.e. tensor, sequence, or tuple types), found {type_spec}.'
+    )
 
 
 def is_generic_op_compatible_type(type_spec):
@@ -210,7 +207,7 @@ def check_all_abstract_types_are_bound(type_spec):
   """
 
   def _check_or_get_unbound_abstract_type_labels(type_spec, bound_labels,
-                                                 check):
+                                                   check):
     """Checks or collects abstract type labels from 'type_spec'.
 
     This is a helper function used by 'check_abstract_types_are_bound', not to
@@ -249,7 +246,7 @@ def check_all_abstract_types_are_bound(type_spec):
       if type_spec.label in bound_labels:
         return set()
       elif not check:
-        return set([type_spec.label])
+        return {type_spec.label}
       else:
         raise TypeError('Unbound type label \'{}\'.'.format(type_spec.label))
     elif type_spec.is_function():
@@ -360,8 +357,7 @@ def is_structure_of_floats(type_spec: computation_types.Type) -> bool:
 def check_is_structure_of_floats(type_spec):
   if not is_structure_of_floats(type_spec):
     raise TypeError(
-        'Expected a type which is structure of floats, found {}.'.format(
-            type_spec))
+        f'Expected a type which is structure of floats, found {type_spec}.')
 
 
 def is_structure_of_integers(type_spec: computation_types.Type) -> bool:
@@ -393,8 +389,7 @@ def is_structure_of_integers(type_spec: computation_types.Type) -> bool:
 def check_is_structure_of_integers(type_spec):
   if not is_structure_of_integers(type_spec):
     raise TypeError(
-        'Expected a type which is structure of integers, found {}.'.format(
-            type_spec))
+        f'Expected a type which is structure of integers, found {type_spec}.')
 
 
 def is_single_integer_or_matches_structure(
@@ -451,14 +446,14 @@ def check_federated_type(
     py_typecheck.check_type(placement, placements.PlacementLiteral)
     if type_spec.placement is not placement:
       raise TypeError(
-          'Expected federated type placed at {}, got one placed at {}.'.format(
-              placement, type_spec.placement))
+          f'Expected federated type placed at {placement}, got one placed at {type_spec.placement}.'
+      )
   if all_equal is not None:
     py_typecheck.check_type(all_equal, bool)
     if type_spec.all_equal != all_equal:
       raise TypeError(
-          'Expected federated type with all_equal {}, got one with {}.'.format(
-              all_equal, type_spec.all_equal))
+          f'Expected federated type with all_equal {all_equal}, got one with {type_spec.all_equal}.'
+      )
 
 
 def is_average_compatible(type_spec: computation_types.Type) -> bool:
@@ -653,14 +648,7 @@ def check_concrete_instance_of(concrete_type: computation_types.Type,
   for label, usages in non_defining_usages.items():
     bound_type = type_bindings.get(label)
     if bound_type is None:
-      if len(usages) == 1:
-        # Single-use abstract types can't be wrong.
-        # Note: we could also add an exception here for cases where every usage
-        # is equivalent to the first usage. However, that's not currently
-        # needed since the only intrinsic that doesn't have a defining use is
-        # GENERIC_ZERO, which has only a single-use type parameter.
-        pass
-      else:
+      if len(usages) != 1:
         raise MissingDefiningUsageError(generic_type, label)
     else:
       for usage in usages:
@@ -681,17 +669,17 @@ def check_valid_federated_weighted_mean_argument_tuple_type(
   """
   py_typecheck.check_type(type_spec, computation_types.StructType)
   if len(type_spec) != 2:
-    raise TypeError('Expected a 2-tuple, found {}.'.format(type_spec))
+    raise TypeError(f'Expected a 2-tuple, found {type_spec}.')
   for _, v in structure.iter_elements(type_spec):
     check_federated_type(v, None, placements.CLIENTS, False)
     if not is_average_compatible(v.member):
       raise TypeError(
-          'Expected average-compatible args, got {} from argument of type {}.'
-          .format(v.member, type_spec))
+          f'Expected average-compatible args, got {v.member} from argument of type {type_spec}.'
+      )
   w_type = type_spec[1].member
   py_typecheck.check_type(w_type, computation_types.TensorType)
   if w_type.shape.ndims != 0:
-    raise TypeError('Expected scalar weight, got {}.'.format(w_type))
+    raise TypeError(f'Expected scalar weight, got {w_type}.')
 
 
 def count_tensors_in_type(

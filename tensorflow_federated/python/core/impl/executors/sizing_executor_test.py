@@ -55,7 +55,7 @@ class SizingExecutorTest(parameterized.TestCase):
     ex = sizing_executor.SizingExecutor(eager_tf_executor.EagerTFExecutor())
     tensor_type = computation_types.TensorType(tf.string, [4])
     strings = ['hi', 'bye', 'tensor', 'federated']
-    total_string_length = sum([len(s) for s in strings])
+    total_string_length = sum(len(s) for s in strings)
 
     async def _make():
       v1 = await ex.create_value(strings, tensor_type)
@@ -157,7 +157,7 @@ class SizingExecutorTest(parameterized.TestCase):
     od = collections.OrderedDict()
     od['a'] = ['some', 'arbitrary', 'string', 'here']
     od['b'] = [[3, 4, 1], [6, 8, -5]]
-    total_string_length = sum([len(s) for s in od['a']])
+    total_string_length = sum(len(s) for s in od['a'])
 
     async def _make():
       v1 = await ex.create_value(od, tup)

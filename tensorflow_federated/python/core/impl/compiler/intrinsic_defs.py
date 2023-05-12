@@ -63,12 +63,12 @@ class IntrinsicDef(object):
     py_typecheck.check_type(name, str)
     py_typecheck.check_type(uri, str)
     py_typecheck.check_type(type_signature, computation_types.Type)
-    self._name = str(name)
-    self._uri = str(uri)
+    self._name = name
+    self._uri = uri
     self._type_signature = type_signature
     self._aggregation_kind = aggregation_kind
     self._broadcast_kind = broadcast_kind
-    _intrinsic_registry[str(uri)] = self
+    _intrinsic_registry[uri] = self
 
   # TODO(b/113112885): Add support for an optional type checking function that
   # can verify whether this intrinsic is applicable to given kinds of arguments,
@@ -99,7 +99,7 @@ class IntrinsicDef(object):
     return self._name
 
   def __repr__(self):
-    return 'IntrinsicDef(\'{}\')'.format(self._uri)
+    return f"IntrinsicDef(\'{self._uri}\')"
 
 
 # TODO(b/113112885): Perhaps add a way for these to get auto-registered to

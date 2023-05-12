@@ -125,17 +125,16 @@ class Value(typed_object.TypedObject, metaclass=abc.ABCMeta):
     if _is_federated_named_tuple(self):
       if name not in structure.name_list(self.type_signature.member):
         raise AttributeError(
-            'There is no such attribute \'{}\' in this federated tuple. Valid '
-            'attributes: ({})'.format(
-                name, ', '.join(dir(self.type_signature.member))))
+            f"There is no such attribute \'{name}\' in this federated tuple. Valid attributes: ({', '.join(dir(self.type_signature.member))})"
+        )
 
       return Value(
           building_block_factory.create_federated_getattr_call(
               self._comp, name))
     if name not in dir(self.type_signature):
       raise AttributeError(
-          'There is no such attribute \'{}\' in this tuple. Valid attributes: ({})'
-          .format(name, ', '.join(dir(self.type_signature))))
+          f"There is no such attribute \'{name}\' in this tuple. Valid attributes: ({', '.join(dir(self.type_signature))})"
+      )
     if self._comp.is_struct():
       return Value(getattr(self._comp, name))
     return Value(building_blocks.Selection(self._comp, name=name))
@@ -150,9 +149,8 @@ class Value(typed_object.TypedObject, metaclass=abc.ABCMeta):
     type_signature = _unfederated(self.type_signature)
     if not type_signature.is_struct():
       raise TypeError(
-          'Operator len() is only supported for (possibly federated) structure '
-          'types, but the object on which it has been invoked is of type {}.'
-          .format(self.type_signature))
+          f'Operator len() is only supported for (possibly federated) structure types, but the object on which it has been invoked is of type {self.type_signature}.'
+      )
     return len(type_signature)
 
   def __getitem__(self, key: Union[int, str, slice]):
@@ -165,41 +163,37 @@ class Value(typed_object.TypedObject, metaclass=abc.ABCMeta):
                                                                key),)
     if not _is_named_tuple(self):
       raise TypeError(
-          'Operator getitem() is only supported for structure types, but the '
-          'object on which it has been invoked is of type {}.'.format(
-              self.type_signature))
+          f'Operator getitem() is only supported for structure types, but the object on which it has been invoked is of type {self.type_signature}.'
+      )
     elem_length = len(self.type_signature)
     if isinstance(key, int):
       if key < 0 or key >= elem_length:
-        raise IndexError(
-            'The index of the selected element {} is out of range.'.format(key))
+        raise IndexError(f'The index of the selected element {key} is out of range.')
       if self._comp.is_struct():
         return Value(self._comp[key])
       else:
         return Value(building_blocks.Selection(self._comp, index=key))
     elif isinstance(key, slice):
-      index_range = range(*key.indices(elem_length))
-      if not index_range:
+      if index_range := range(*key.indices(elem_length)):
+        return to_value([self[k] for k in index_range], None)
+      else:
         raise IndexError('Attempted to slice 0 elements, which is not '
                          'currently supported.')
-      return to_value([self[k] for k in index_range], None)
 
   def __iter__(self):
     type_signature = _unfederated(self.type_signature)
     if not type_signature.is_struct():
       raise TypeError(
-          'Operator iter() is only supported for (possibly federated) structure '
-          'types, but the object on which it has been invoked is of type {}.'
-          .format(self.type_signature))
+          f'Operator iter() is only supported for (possibly federated) structure types, but the object on which it has been invoked is of type {self.type_signature}.'
+      )
     for index in range(len(type_signature)):
       yield self[index]
 
   def __call__(self, *args, **kwargs):
     if not self.type_signature.is_function():
       raise SyntaxError(
-          'Function-like invocation is only supported for values of functional '
-          'types, but the value being invoked is of type {} that does not '
-          'support invocation.'.format(self.type_signature))
+          f'Function-like invocation is only supported for values of functional types, but the value being invoked is of type {self.type_signature} that does not support invocation.'
+      )
     if args or kwargs:
       args = [to_value(x, None) for x in args]
       kwargs = {k: to_value(v, None) for k, v in kwargs.items()}
@@ -216,8 +210,8 @@ class Value(typed_object.TypedObject, metaclass=abc.ABCMeta):
   def __add__(self, other):
     other = to_value(other, None)
     if not self.type_signature.is_equivalent_to(other.type_signature):
-      raise TypeError('Cannot add {} and {}.'.format(self.type_signature,
-                                                     other.type_signature))
+      raise TypeError(
+          f'Cannot add {self.type_signature} and {other.type_signature}.')
     call = building_blocks.Call(
         building_blocks.Intrinsic(
             intrinsic_defs.GENERIC_PLUS.uri,
@@ -398,18 +392,16 @@ def to_value(
     result = _wrap_constant_as_value(arg)
   elif isinstance(arg, (tf.Tensor, tf.Variable)):
     raise TypeError(
-        'TensorFlow construct {} has been encountered in a federated '
-        'context. TFF does not support mixing TF and federated orchestration '
-        'code. Please wrap any TensorFlow constructs with '
-        '`tff.tf_computation`.'.format(arg))
+        f'TensorFlow construct {arg} has been encountered in a federated context. TFF does not support mixing TF and federated orchestration code. Please wrap any TensorFlow constructs with `tff.tf_computation`.'
+    )
   else:
     raise TypeError(
-        'Unable to interpret an argument of type {} as a `tff.Value`.'.format(
-            py_typecheck.type_string(type(arg))))
+        f'Unable to interpret an argument of type {py_typecheck.type_string(type(arg))} as a `tff.Value`.'
+    )
   py_typecheck.check_type(result, Value)
   if (type_spec is not None and
       not type_spec.is_assignable_from(result.type_signature)):
     raise TypeError(
-        'The supplied argument maps to TFF type {}, which is incompatible with '
-        'the requested type {}.'.format(result.type_signature, type_spec))
+        f'The supplied argument maps to TFF type {result.type_signature}, which is incompatible with the requested type {type_spec}.'
+    )
   return result

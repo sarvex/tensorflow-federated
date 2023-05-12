@@ -62,8 +62,8 @@ class UTF8Chunker:
       if max_chunk_value < 1:
         raise ValueError('If set, max_chunk_value must be at least 1.')
       if self._max_chunk_value > self._dtype.max:
-        raise ValueError('max_chunk_value {} cannot fit in dtype {}'.format(
-            max_chunk_value, dtype))
+        raise ValueError(
+            f'max_chunk_value {max_chunk_value} cannot fit in dtype {dtype}')
       self._dtype_size_bytes = math.floor(
           math.log2(self._max_chunk_value) / self._utf8_size_bits)
     else:
@@ -180,7 +180,6 @@ class UTF8Chunker:
         int_to_char_fn, otypes=(np.string_,))(
             encoded_chunks_bytes)
     decoded_chars_reshaped = decoded_chars.reshape(-1, self._max_length)
-    decoded_strings = np.apply_along_axis(
-        lambda r: r.tobytes(), arr=decoded_chars_reshaped, axis=1)
-
-    return decoded_strings
+    return np.apply_along_axis(lambda r: r.tobytes(),
+                               arr=decoded_chars_reshaped,
+                               axis=1)

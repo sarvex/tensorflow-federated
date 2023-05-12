@@ -91,11 +91,12 @@ class Struct(object):
       name, value = e
       if name in reserved_names:
         raise ValueError(
-            'The names in {} are reserved. You passed the name {}.'.format(
-                reserved_names, name))
+            f'The names in {reserved_names} are reserved. You passed the name {name}.'
+        )
       elif name in name_to_index:
-        raise ValueError('`Struct` does not support duplicated names, '
-                         'found {}.'.format([e[0] for e in elements]))
+        raise ValueError(
+            f'`Struct` does not support duplicated names, found {[e[0] for e in elements]}.'
+        )
       names.append(name)
       values.append(value)
       if name is not None:
@@ -135,11 +136,10 @@ class Struct(object):
     py_typecheck.check_type(key, (int, str, slice))
     if isinstance(key, str):
       return self.__getattr__(key)
-    if isinstance(key, int):
-      if key < 0 or key >= len(self._element_array):
-        raise IndexError(
-            'Element index {} is out of range, `Struct` has {} elements.'
-            .format(key, len(self._element_array)))
+    if isinstance(key, int) and (key < 0 or key >= len(self._element_array)):
+      raise IndexError(
+          f'Element index {key} is out of range, `Struct` has {len(self._element_array)} elements.'
+      )
     return self._element_array[key]
 
   def __getattr__(self, name):
@@ -171,9 +171,7 @@ class Struct(object):
 
     def _element_str(element):
       name, value = element
-      if name is not None:
-        return '{}={}'.format(name, value)
-      return str(value)
+      return '{}={}'.format(name, value) if name is not None else str(value)
 
     return '<{}>'.format(','.join(_element_str(e) for e in iter_elements(self)))
 
@@ -340,11 +338,10 @@ def flatten(struct):
   """
   if not isinstance(struct, Struct):
     return tf.nest.flatten(struct)
-  else:
-    result = []
-    for _, v in iter_elements(struct):
-      result.extend(flatten(v))
-    return result
+  result = []
+  for _, v in iter_elements(struct):
+    result.extend(flatten(v))
+  return result
 
 
 def pack_sequence_as(structure, flat_sequence: List[Any]):
@@ -456,8 +453,7 @@ def map_structure(fn, *structures: Struct):
   py_typecheck.check_type(structures[0], Struct)
   for i, other in enumerate(structures[1:]):
     if not is_same_structure(structures[0], other):
-      raise TypeError('Structure at position {} is not the same '
-                      'structure'.format(i))
+      raise TypeError(f'Structure at position {i} is not the same structure')
 
   flat_structure = [flatten(s) for s in structures]
   entries = zip(*flat_structure)
@@ -583,10 +579,7 @@ def to_container_recursive(
   py_typecheck.check_callable(container_fn)
 
   def recurse(v):
-    if isinstance(v, Struct):
-      return to_container_recursive(v, container_fn)
-    else:
-      return v
+    return to_container_recursive(v, container_fn) if isinstance(v, Struct) else v
 
   return container_fn([(k, recurse(v)) for k, v in iter_elements(value)])
 
@@ -642,10 +635,9 @@ def update_struct(structure, **kwargs):
   if not (py_typecheck.is_named_tuple(structure) or
           py_typecheck.is_attrs(structure) or
           isinstance(structure, (Struct, collections.abc.Mapping))):
-    raise TypeError('`structure` must be a structure with named fields (e.g. '
-                    'dict, attrs class, collections.namedtuple, '
-                    'tff.structure.Struct), but found {}'.format(
-                        type(structure)))
+    raise TypeError(
+        f'`structure` must be a structure with named fields (e.g. dict, attrs class, collections.namedtuple, tff.structure.Struct), but found {type(structure)}'
+    )
   if isinstance(structure, Struct):
     elements = [(k, v) if k not in kwargs else (k, kwargs.pop(k))
                 for k, v in iter_elements(structure)]

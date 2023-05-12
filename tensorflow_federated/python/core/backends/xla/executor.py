@@ -76,7 +76,7 @@ def to_representation_for_type(value, type_spec, backend=None):
         structure.from_container(value, recursive=True), type_spec)
   if isinstance(type_spec, computation_types.TensorType):
     return runtime.normalize_tensor_representation(value, type_spec)
-  raise TypeError('Unexpected type {}.'.format(type_spec))
+  raise TypeError(f'Unexpected type {type_spec}.')
 
 
 class XlaValue(executor_value_base.ExecutorValue):
@@ -215,8 +215,7 @@ class XlaExecutor(executor_base.Executor):
       py_typecheck.check_type(index, int)
       if name is not None:
         raise ValueError(
-            'Cannot simultaneously specify name {} and index {}.'.format(
-                name, index))
+            f'Cannot simultaneously specify name {name} and index {index}.')
       else:
         return XlaValue(source.internal_representation[index],
                         source.type_signature[index], self._backend)

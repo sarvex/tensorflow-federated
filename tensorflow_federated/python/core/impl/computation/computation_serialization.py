@@ -40,14 +40,14 @@ def serialize_computation(
   """
   py_typecheck.check_type(computation, computation_base.Computation)
 
-  if isinstance(computation, computation_impl.ConcreteComputation):
-    computation_proto = pb.Computation()
-    computation_proto.CopyFrom(
-        computation_impl.ConcreteComputation.get_proto(computation))
-    return computation_proto
-  else:
-    raise NotImplementedError('Serialization of type {} is not currently'
-                              'implemented yet.'.format(type(computation)))
+  if not isinstance(computation, computation_impl.ConcreteComputation):
+    raise NotImplementedError(
+        f'Serialization of type {type(computation)} is not currentlyimplemented yet.'
+    )
+  computation_proto = pb.Computation()
+  computation_proto.CopyFrom(
+      computation_impl.ConcreteComputation.get_proto(computation))
+  return computation_proto
 
 
 def deserialize_computation(

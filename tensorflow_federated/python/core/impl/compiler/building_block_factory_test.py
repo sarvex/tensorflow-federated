@@ -39,7 +39,7 @@ class UniqueNameGeneratorTest(test_case.TestCase):
   def test_returns_unique_names_with_none_comp_and_none_prefix(self):
     name_generator = building_block_factory.unique_name_generator(
         None, prefix=None)
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     first_name = list(names)[0]
     prefix = first_name[:3]
     self.assertLen(names, 10)
@@ -47,14 +47,14 @@ class UniqueNameGeneratorTest(test_case.TestCase):
 
   def test_returns_unique_names_with_none_comp_and_unset_prefix(self):
     name_generator = building_block_factory.unique_name_generator(None)
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     self.assertLen(names, 10)
     self.assertTrue(all(n.startswith('_var') for n in names))
 
   def test_returns_unique_names_with_none_comp_and_prefix(self):
     name_generator = building_block_factory.unique_name_generator(
         None, prefix='_test')
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     self.assertLen(names, 10)
     self.assertTrue(all(n.startswith('_test') for n in names))
 
@@ -63,7 +63,7 @@ class UniqueNameGeneratorTest(test_case.TestCase):
     comp = building_blocks.Lambda(ref.name, ref.type_signature, ref)
     name_generator = building_block_factory.unique_name_generator(
         comp, prefix=None)
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     first_name = list(names)[0]
     prefix = first_name[:3]
     self.assertLen(names, 10)
@@ -73,7 +73,7 @@ class UniqueNameGeneratorTest(test_case.TestCase):
     ref = building_blocks.Reference('a', tf.int32)
     comp = building_blocks.Lambda(ref.name, ref.type_signature, ref)
     name_generator = building_block_factory.unique_name_generator(comp)
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     self.assertLen(names, 10)
     self.assertTrue(all(n.startswith('_var') for n in names))
 
@@ -82,7 +82,7 @@ class UniqueNameGeneratorTest(test_case.TestCase):
     comp = building_blocks.Lambda(ref.name, ref.type_signature, ref)
     name_generator = building_block_factory.unique_name_generator(
         comp, prefix='_test')
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     self.assertLen(names, 10)
     self.assertTrue(all(n.startswith('_test') for n in names))
 
@@ -91,7 +91,7 @@ class UniqueNameGeneratorTest(test_case.TestCase):
     comp = building_blocks.Lambda(ref.name, ref.type_signature, ref)
     name_generator = building_block_factory.unique_name_generator(
         comp, prefix='_test')
-    names = set(next(name_generator) for _ in range(10))
+    names = {next(name_generator) for _ in range(10)}
     first_name = list(names)[0]
     prefix = first_name[:3]
     self.assertNotEqual(prefix, '_test')
@@ -1860,7 +1860,7 @@ class SelectOutputFromLambdaTest(test_case.TestCase):
   def test_raises_on_non_str_int_index(self):
     lam = identity_for_type(computation_types.StructType([tf.int32]))
     with self.assertRaisesRegex(TypeError, 'Invalid selection type'):
-      building_block_factory.select_output_from_lambda(lam, [dict()])
+      building_block_factory.select_output_from_lambda(lam, [{}])
 
   def test_selects_single_output(self):
     input_type = computation_types.StructType([tf.int32, tf.float32])

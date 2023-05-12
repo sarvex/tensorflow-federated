@@ -154,7 +154,7 @@ class DifferentiallyPrivateFactory(factory.UnweightedAggregationFactory):
     """
 
     if isinstance(clients_per_round, int):
-      clients_per_round = float(clients_per_round)
+      clients_per_round = clients_per_round
 
     _check_float_nonnegative(noise_multiplier, 'noise_multiplier')
     _check_float_positive(clients_per_round, 'clients_per_round')
@@ -203,7 +203,7 @@ class DifferentiallyPrivateFactory(factory.UnweightedAggregationFactory):
     """
 
     if isinstance(clients_per_round, int):
-      clients_per_round = float(clients_per_round)
+      clients_per_round = clients_per_round
 
     _check_float_nonnegative(noise_multiplier, 'noise_multiplier')
     _check_float_positive(clients_per_round, 'clients_per_round')
@@ -258,7 +258,7 @@ class DifferentiallyPrivateFactory(factory.UnweightedAggregationFactory):
       A `DifferentiallyPrivateFactory` with Gaussian noise by tree aggregation.
     """
     if isinstance(clients_per_round, int):
-      clients_per_round = float(clients_per_round)
+      clients_per_round = clients_per_round
 
     _check_float_nonnegative(noise_multiplier, 'noise_multiplier')
     _check_float_positive(clients_per_round, 'clients_per_round')

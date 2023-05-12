@@ -192,8 +192,7 @@ class _ModelFromFunctional(model_lib.Model):
       self._metrics = [constructor() for constructor in metric_constructors]
       # Raise an error if there are duplicate metric names
       metric_names = [metric.name for metric in self._metrics]
-      duplicates = set(
-          name for name in metric_names if metric_names.count(name) > 1)
+      duplicates = {name for name in metric_names if metric_names.count(name) > 1}
       if duplicates:
         raise ValueError(
             f'{duplicates} appeared in the metric names more than once, '

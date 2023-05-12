@@ -91,7 +91,7 @@ class StructTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(structure.to_elements(x), v)
     self.assertEqual(repr(x), 'Struct([(None, 10)])')
     self.assertEqual(str(x), '<10>')
-    self.assertEqual(structure.to_odict_or_tuple(x), tuple([10]))
+    self.assertEqual(structure.to_odict_or_tuple(x), (10, ))
     with self.assertRaisesRegex(ValueError, 'unnamed'):
       structure.to_odict(x)
 
@@ -412,7 +412,7 @@ class StructTest(tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(str(x), '<10,20>')
 
   def test_from_container_with_tuple(self):
-    x = structure.from_container(tuple([10, 20]))
+    x = structure.from_container((10, 20))
     self.assertIsInstance(x, structure.Struct)
     self.assertEqual(str(x), '<10,20>')
 

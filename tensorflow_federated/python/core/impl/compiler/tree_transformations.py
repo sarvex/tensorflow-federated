@@ -212,29 +212,25 @@ class ExtractComputation(transformation_utils.TransformSpec):
       function = block.result
     else:
       function = comp.function
-    if comp.argument is not None:
-      if self._predicate(comp.argument):
-        name = next(self._name_generator)
-        variables.append((name, comp.argument))
-        argument = building_blocks.Reference(name, comp.argument.type_signature)
-      elif comp.argument.is_block():
-        block = comp.argument
-        variables.extend(block.locals)
-        argument = block.result
-      else:
-        argument = comp.argument
-    else:
+    if comp.argument is None:
       argument = None
+    elif self._predicate(comp.argument):
+      name = next(self._name_generator)
+      variables.append((name, comp.argument))
+      argument = building_blocks.Reference(name, comp.argument.type_signature)
+    elif comp.argument.is_block():
+      block = comp.argument
+      variables.extend(block.locals)
+      argument = block.result
+    else:
+      argument = comp.argument
     call = building_blocks.Call(function, argument)
     block = building_blocks.Block(variables, call)
     return self._extract_from_block(block)
 
   def _extract_from_lambda(self, comp):
     """Returns a new computation with all intrinsics extracted."""
-    if comp.parameter_name is None:
-      captured_names = set()
-    else:
-      captured_names = comp.parameter_name
+    captured_names = set() if comp.parameter_name is None else comp.parameter_name
     if self._predicate(comp.result):
       name = next(self._name_generator)
       variables = [(name, comp.result)]
@@ -405,22 +401,15 @@ class InlineBlock(transformation_utils.TransformSpec):
       return comp, False
     if comp.is_reference():
       payload = symbol_tree.get_payload_with_name(comp.name)
-      if payload is None:
-        value = None
-      else:
-        value = payload.value
+      value = None if payload is None else payload.value
       # This identifies a variable bound by a Block as opposed to a Lambda.
-      if value is not None:
-        return value, True
-      return comp, False
+      return (value, True) if value is not None else (comp, False)
     elif comp.is_block():
-      variables = [(name, value)
-                   for name, value in comp.locals
-                   if not self._should_inline_variable(name)]
-      if not variables:
-        comp = comp.result
-      else:
+      if variables := [(name, value) for name, value in comp.locals
+                       if not self._should_inline_variable(name)]:
         comp = building_blocks.Block(variables, comp.result)
+      else:
+        comp = comp.result
       return comp, True
     return comp, False
 
@@ -452,12 +441,13 @@ class InlineSelectionsFromTuples(transformation_utils.TransformSpec):
     super().__init__(global_transform=True)
 
   def should_transform(self, comp, symbol_tree):
-    if comp.is_selection() and comp.source.is_struct():
-      return True
-    elif comp.is_selection() and comp.source.is_reference():
-      resolved = symbol_tree.get_payload_with_name(comp.source.name)
-      return (resolved is not None and resolved.value is not None and
-              resolved.value.is_struct())
+    if comp.is_selection():
+      if comp.source.is_struct():
+        return True
+      elif comp.source.is_reference():
+        resolved = symbol_tree.get_payload_with_name(comp.source.name)
+        return (resolved is not None and resolved.value is not None and
+                resolved.value.is_struct())
     return False
 
   def transform(self, comp, symbol_tree):
@@ -761,8 +751,8 @@ class MergeTupleIntrinsics(transformation_utils.TransformSpec):
     )
     if uri not in expected_uri:
       raise ValueError(
-          'The value of `uri` is expected to be on of {}, found {}'.format(
-              expected_uri, uri))
+          f'The value of `uri` is expected to be on of {expected_uri}, found {uri}'
+      )
     self._uri = uri
 
   def should_transform(self, comp):
@@ -797,8 +787,8 @@ class MergeTupleIntrinsics(transformation_utils.TransformSpec):
       return self._transform_args_with_abstract_types(comps, type_signature)
     else:
       raise TypeError(
-          'Expected a FederatedType, FunctionalType, or an AbstractType, '
-          'found: {}'.format(type(type_signature)))
+          f'Expected a FederatedType, FunctionalType, or an AbstractType, found: {type(type_signature)}'
+      )
 
   def _transform_args_with_abstract_types(self, comps, type_signature):
     r"""Transforms a Python `list` of computations with abstract types.
@@ -915,9 +905,7 @@ class MergeTupleIntrinsics(transformation_utils.TransformSpec):
         transformed_args.append(transformed_arg)
       return building_blocks.Struct(transformed_args)
     else:
-      args = []
-      for _, call in structure.iter_elements(comp):
-        args.append(call.argument)
+      args = [call.argument for _, call in structure.iter_elements(comp)]
       return self._transform_args_with_type(args, type_signature)
 
   def _create_merged_parameter_for_type(self, packed_parameter_types,
@@ -933,8 +921,8 @@ class MergeTupleIntrinsics(transformation_utils.TransformSpec):
           packed_parameter_types, type_signature)
     else:
       raise TypeError(
-          'Expected a FederatedType, FunctionalType, or an AbstractType, '
-          'found: {}'.format(type(type_signature)))
+          f'Expected a FederatedType, FunctionalType, or an AbstractType, found: {type(type_signature)}'
+      )
 
   def _create_merged_parameter_for_abstract_type(self, param_types,
                                                  type_signature):
@@ -1004,9 +992,10 @@ class MergeTupleIntrinsics(transformation_utils.TransformSpec):
         param_types.append(param_type_element)
       return computation_types.StructType(param_types)
     else:
-      packed_param_types = []
-      for _, call in structure.iter_elements(comp):
-        packed_param_types.append(call.function.type_signature.parameter)
+      packed_param_types = [
+          call.function.type_signature.parameter
+          for _, call in structure.iter_elements(comp)
+      ]
       return self._create_merged_parameter_for_type(packed_param_types,
                                                     type_signature)
 
@@ -1105,14 +1094,13 @@ def remove_duplicate_block_locals(comp):
       # `value`. We don't need to update anything, or replace the current
       # reference.
       return ref, False
-    else:
-      highest_payload = payloads_with_value[-1]
-      lower_payloads = payloads_with_value[:-1]
-      for payload in lower_payloads:
-        symbol_tree.update_payload_with_name(payload.name)
-      highest_building_block = building_blocks.Reference(
-          highest_payload.name, highest_payload.value.type_signature)
-      return highest_building_block, True
+    highest_payload = payloads_with_value[-1]
+    lower_payloads = payloads_with_value[:-1]
+    for payload in lower_payloads:
+      symbol_tree.update_payload_with_name(payload.name)
+    highest_building_block = building_blocks.Reference(
+        highest_payload.name, highest_payload.value.type_signature)
+    return highest_building_block, True
 
   def _transform(comp, symbol_tree):
     """Returns a new transformed computation or `comp`."""
@@ -1288,19 +1276,17 @@ class ReplaceCalledLambdaWithBlock(transformation_utils.TransformSpec):
       return building_blocks.Block(new_locals, comp.result), True
     elif referred is not None and referred.is_lambda():
       referred = typing.cast(building_blocks.Lambda, referred)
-      if referred.parameter_type is not None:
-        transformed_comp = building_blocks.Block(
-            [(referred.parameter_name, comp.argument)], referred.result)
-      else:
-        transformed_comp = referred.result
+      transformed_comp = (building_blocks.Block([
+          (referred.parameter_name, comp.argument)
+      ], referred.result) if referred.parameter_type is not None else
+                          referred.result)
       symbol_tree.update_payload_with_name(comp.function.name)
+    elif comp.function.parameter_type is not None:
+      transformed_comp = building_blocks.Block(
+          [(comp.function.parameter_name, comp.argument)],
+          comp.function.result)
     else:
-      if comp.function.parameter_type is not None:
-        transformed_comp = building_blocks.Block(
-            [(comp.function.parameter_name, comp.argument)],
-            comp.function.result)
-      else:
-        transformed_comp = comp.function.result
+      transformed_comp = comp.function.result
     return transformed_comp, True
 
 
@@ -1535,12 +1521,12 @@ def resolve_higher_order_functions(
     elif resolved_fn.is_block():
       new_result = building_blocks.Call(resolved_fn.result, resolved_argument)
       block_to_walk = building_blocks.Block(resolved_fn.locals, new_result)
-      if resolved_fn.result.is_lambda() or resolved_fn.result.is_intrinsic(
-      ) or resolved_fn.result.is_compiled_computation():
-        if resolved_fn.result.is_lambda() and not _contains_function(
-            resolved_fn.result.type_signature):
-          # Not a higher order lambda, we are in our base case.
-          return block_to_walk, fn_modified or arg_modified
+      if ((resolved_fn.result.is_lambda() or resolved_fn.result.is_intrinsic()
+           or resolved_fn.result.is_compiled_computation())
+          and resolved_fn.result.is_lambda()
+          and not _contains_function(resolved_fn.result.type_signature)):
+        # Not a higher order lambda, we are in our base case.
+        return block_to_walk, fn_modified or arg_modified
       # Retraversal of already walked tree to resolve higher-order function.
       resolved, _ = _resolve_higher_order_fns(block_to_walk)
       return resolved, True
@@ -1564,8 +1550,8 @@ def resolve_higher_order_functions(
           resolved_fn, resolved_argument), fn_modified or arg_modified
 
   def _resolve_higher_order_fns(
-      inner_comp: building_blocks.ComputationBuildingBlock
-  ) -> TransformReturnType:
+        inner_comp: building_blocks.ComputationBuildingBlock
+    ) -> TransformReturnType:
     """Internal switch to cover resolution of higher order functions.
 
     This algorithm achieves higher order function resolution essentially by
@@ -1597,14 +1583,13 @@ def resolve_higher_order_functions(
     elif inner_comp.is_selection():
       if _contains_function(inner_comp.type_signature):
         return _resolve_functional_selection(inner_comp)
-      else:
-        # We may still have higher-order functions hiding underneath, continue
-        # the walk.
-        resolved_source, source_modified = _resolve_higher_order_fns(
-            inner_comp.source)
-        return building_blocks.Selection(
-            resolved_source, name=inner_comp.name,
-            index=inner_comp.index), source_modified
+      # We may still have higher-order functions hiding underneath, continue
+      # the walk.
+      resolved_source, source_modified = _resolve_higher_order_fns(
+          inner_comp.source)
+      return building_blocks.Selection(
+          resolved_source, name=inner_comp.name,
+          index=inner_comp.index), source_modified
     elif inner_comp.is_block():
       return _resolve_block(inner_comp)
     elif inner_comp.is_call():
@@ -1781,10 +1766,10 @@ def group_block_locals_by_namespace(block):
       if refs.issubset(args):
         cls.append((name, comp))
         selected_indices.append(idx)
-    remaining_comps = []
-    for idx, comp_tuple in enumerate(comps_yet_to_partition):
-      if idx not in selected_indices:
-        remaining_comps.append(comp_tuple)
+    remaining_comps = [
+        comp_tuple for idx, comp_tuple in enumerate(comps_yet_to_partition)
+        if idx not in selected_indices
+    ]
     comps_yet_to_partition = remaining_comps
     comp_classes.append(cls)
 
@@ -2009,21 +1994,20 @@ def strip_placement(comp):
         comp.function.result.name == comp.function.parameter_name)
     if zip_or_value_removed:
       return comp.argument
-    else:
-      map_removed = (
-          comp.function.result.is_call() and
-          comp.function.result.function.is_selection() and
-          comp.function.result.function.index == 0 and
-          comp.function.result.argument.is_selection() and
-          comp.function.result.argument.index == 1 and
-          comp.function.result.function.source.is_reference() and
-          comp.function.result.function.source.name
-          == comp.function.parameter_name and
-          comp.function.result.function.source.is_reference() and
-          comp.function.result.function.source.name
-          == comp.function.parameter_name and comp.argument.is_struct())
-      if map_removed:
-        return building_blocks.Call(comp.argument[0], comp.argument[1])
+    map_removed = (
+        comp.function.result.is_call() and
+        comp.function.result.function.is_selection() and
+        comp.function.result.function.index == 0 and
+        comp.function.result.argument.is_selection() and
+        comp.function.result.argument.index == 1 and
+        comp.function.result.function.source.is_reference() and
+        comp.function.result.function.source.name
+        == comp.function.parameter_name and
+        comp.function.result.function.source.is_reference() and
+        comp.function.result.function.source.name
+        == comp.function.parameter_name and comp.argument.is_struct())
+    if map_removed:
+      return building_blocks.Call(comp.argument[0], comp.argument[1])
     return comp
 
   def _transform(comp):

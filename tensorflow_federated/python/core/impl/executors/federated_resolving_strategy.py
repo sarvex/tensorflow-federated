@@ -115,9 +115,8 @@ class FederatedResolvingStrategyValue(executor_value_base.ExecutorValue):
         return await asyncio.gather(*[v.compute() for v in self._value])
     else:
       raise RuntimeError(
-          'Computing values of type {} represented as {} is not supported in '
-          'this executor.'.format(self._type_signature,
-                                  py_typecheck.type_string(type(self._value))))
+          f'Computing values of type {self._type_signature} represented as {py_typecheck.type_string(type(self._value))} is not supported in this executor.'
+      )
 
 
 class FederatedResolvingStrategy(federating_executor.FederatingStrategy):
@@ -201,8 +200,7 @@ class FederatedResolvingStrategy(federating_executor.FederatingStrategy):
         pl_cardinality = len(self._target_executors[pl])
         if pl_cardinality != 1:
           raise ValueError(
-              'Unsupported cardinality for placement "{}": {}.'.format(
-                  pl, pl_cardinality))
+              f'Unsupported cardinality for placement "{pl}": {pl_cardinality}.')
 
   def close(self):
     for p, v in self._target_executors.items():
@@ -229,8 +227,8 @@ class FederatedResolvingStrategy(federating_executor.FederatingStrategy):
     children = self._target_executors.get(placement)
     if (not children and placement != placements.CLIENTS):
       raise ValueError(
-          'Expected at least one participant for the \'{}\' placement, found '
-          'none.'.format(placement))
+          f"Expected at least one participant for the \'{placement}\' placement, found none."
+      )
 
   def _check_value_compatible_with_placement(self, value, placement, all_equal):
     """Tests that `value` is compatible with the given `placement`.
@@ -349,11 +347,11 @@ class FederatedResolvingStrategy(federating_executor.FederatingStrategy):
     for _, v in elements:
       py_typecheck.check_type(v, list)
       if len(v) != cardinality:
-        raise RuntimeError('Expected {} items, found {}.'.format(
-            cardinality, len(v)))
-    new_vals = []
-    for idx in range(cardinality):
-      new_vals.append(structure.Struct([(k, v[idx]) for k, v in elements]))
+        raise RuntimeError(f'Expected {cardinality} items, found {len(v)}.')
+    new_vals = [
+        structure.Struct([(k, v[idx]) for k, v in elements])
+        for idx in range(cardinality)
+    ]
     new_vals = await asyncio.gather(
         *[c.create_struct(x) for c, x in zip(children, new_vals)])
     return FederatedResolvingStrategyValue(
@@ -412,8 +410,8 @@ class FederatedResolvingStrategy(federating_executor.FederatingStrategy):
     py_typecheck.check_type(arg.internal_representation, list)
     if len(arg.internal_representation) != 1:
       raise ValueError(
-          'Federated broadcast expects a value with a single representation, '
-          'found {}.'.format(len(arg.internal_representation)))
+          f'Federated broadcast expects a value with a single representation, found {len(arg.internal_representation)}.'
+      )
     return await executor_utils.compute_intrinsic_federated_broadcast(
         self._executor, arg)
 

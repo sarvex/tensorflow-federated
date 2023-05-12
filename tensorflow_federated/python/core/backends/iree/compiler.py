@@ -64,8 +64,8 @@ def import_tensorflow_computation(comp, name='fn'):
 
   which_computation = comp.WhichOneof('computation')
   if which_computation != 'tensorflow':
-    raise TypeError('Expected a TensorFlow computation, found {}.'.format(
-        which_computation))
+    raise TypeError(
+        f'Expected a TensorFlow computation, found {which_computation}.')
 
   output_tensor_names = tensorflow_utils.extract_tensor_names_from_binding(
       comp.tensorflow.result)
@@ -95,7 +95,7 @@ def import_tensorflow_computation(comp, name='fn'):
   else:
     initializer = None
 
-  inputs = import_results[0:len(input_tensor_names)]
+  inputs = import_results[:len(input_tensor_names)]
   outputs = import_results[len(input_tensor_names):]
 
   with graph.as_default():
@@ -128,6 +128,7 @@ def import_tensorflow_computation(comp, name='fn'):
           model_dir,
           import_type='SIGNATURE_DEF',
           import_only=True,
-          saved_model_tags=set(['unused']),
-          exported_names=[name])
+          saved_model_tags={'unused'},
+          exported_names=[name],
+      )
       return computation_module.ComputationModule(iree_module, name, type_spec)

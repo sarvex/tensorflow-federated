@@ -279,8 +279,7 @@ def _pack_noarg_graph(graph_def, return_type, result_binding):
       type=type_serialization.serialize_type(function_type),
       tensorflow=pb.TensorFlow(
           graph_def=packed_graph_def, parameter=None, result=result_binding))
-  building_block = building_blocks.ComputationBuildingBlock.from_proto(proto)
-  return building_block
+  return building_blocks.ComputationBuildingBlock.from_proto(proto)
 
 
 def _create_no_variable_tensorflow():

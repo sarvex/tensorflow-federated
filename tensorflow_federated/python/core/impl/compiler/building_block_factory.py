@@ -95,16 +95,13 @@ def unique_name_generator(comp: building_blocks.ComputationBuildingBlock,
       `None` or if `comp` contains any name with this prefix, then a unique
       prefix will be generated from random lowercase ascii characters.
   """
-  if comp is not None:
-    names = transformation_utils.get_unique_names(comp)
-  else:
-    names = set()
+  names = set() if comp is None else transformation_utils.get_unique_names(comp)
   while prefix is None or any(n.startswith(prefix) for n in names):
     characters = string.ascii_lowercase
-    prefix = '_{}'.format(''.join(random.choice(characters) for _ in range(3)))
+    prefix = f"_{''.join(random.choice(characters) for _ in range(3))}"
   index = 1
   while True:
-    yield '{}{}'.format(prefix, index)
+    yield f'{prefix}{index}'
     index += 1
 
 
@@ -187,8 +184,7 @@ class SelectionSpec(object):
     return self._selection_sequence
 
   def __str__(self):
-    return 'SelectionSequence(tuple_index={},selection_sequence={}'.format(
-        self._tuple_index, self._selection_sequence)
+    return f'SelectionSequence(tuple_index={self._tuple_index},selection_sequence={self._selection_sequence}'
 
   def __repr__(self):
     return str(self)
@@ -508,13 +504,11 @@ def create_federated_getattr_comp(
   ]
   if name not in element_names:
     raise ValueError(
-        'The federated value has no element of name `{}`. Value: {}'.format(
-            name, comp.formatted_representation()))
+        f'The federated value has no element of name `{name}`. Value: {comp.formatted_representation()}'
+    )
   apply_input = building_blocks.Reference('x', comp.type_signature.member)
   selected = building_blocks.Selection(apply_input, name=name)
-  apply_lambda = building_blocks.Lambda('x', apply_input.type_signature,
-                                        selected)
-  return apply_lambda
+  return building_blocks.Lambda('x', apply_input.type_signature, selected)
 
 
 def create_federated_getitem_comp(
@@ -549,14 +543,10 @@ def create_federated_getitem_comp(
   else:
     elems = structure.to_elements(comp.type_signature.member)
     index_range = range(*key.indices(len(elems)))
-    elem_list = []
-    for k in index_range:
-      elem_list.append(
-          (elems[k][0], building_blocks.Selection(apply_input, index=k)))
+    elem_list = [(elems[k][0], building_blocks.Selection(apply_input, index=k))
+                 for k in index_range]
     selected = building_blocks.Struct(elem_list)
-  apply_lambda = building_blocks.Lambda('x', apply_input.type_signature,
-                                        selected)
-  return apply_lambda
+  return building_blocks.Lambda('x', apply_input.type_signature, selected)
 
 
 def create_computation_appending(
@@ -596,7 +586,7 @@ def create_computation_appending(
       value_type=building_blocks.ComputationBuildingBlock):
     name2, comp2 = comp2
   else:
-    raise TypeError('Unexpected tuple element: {}.'.format(comp2))
+    raise TypeError(f'Unexpected tuple element: {comp2}.')
   comps = building_blocks.Struct((comp1, comp2))
   ref = building_blocks.Reference('comps', comps.type_signature)
   sel_0 = building_blocks.Selection(ref, index=0)
@@ -794,7 +784,7 @@ def create_federated_eval(
     uri = intrinsic_defs.FEDERATED_EVAL_AT_SERVER.uri
     all_equal = True
   else:
-    raise TypeError('Unsupported placement {}.'.format(placement))
+    raise TypeError(f'Unsupported placement {placement}.')
   result_type = computation_types.FederatedType(
       fn.type_signature.result, placement, all_equal=all_equal)
   intrinsic_type = computation_types.FunctionType(fn.type_signature,
@@ -913,8 +903,7 @@ def create_federated_map_or_apply(
   elif arg.type_signature.placement is placements.SERVER:
     return create_federated_apply(fn, arg)
   else:
-    raise TypeError('Unsupported placement {}.'.format(
-        arg.type_signature.placement))
+    raise TypeError(f'Unsupported placement {arg.type_signature.placement}.')
 
 
 def create_federated_mean(
@@ -1218,7 +1207,7 @@ def create_federated_value(
   elif placement is placements.SERVER:
     uri = intrinsic_defs.FEDERATED_VALUE_AT_SERVER.uri
   else:
-    raise TypeError('Unsupported placement {}.'.format(placement))
+    raise TypeError(f'Unsupported placement {placement}.')
   result_type = computation_types.FederatedType(
       value.type_signature, placement, all_equal=True)
   intrinsic_type = computation_types.FunctionType(value.type_signature,
@@ -1263,8 +1252,7 @@ def _create_flat_federated_zip(value):
   elif first_type_signature.placement == placements.SERVER:
     map_fn = create_federated_apply
   else:
-    raise TypeError('Unsupported placement {}.'.format(
-        first_type_signature.placement))
+    raise TypeError(f'Unsupported placement {first_type_signature.placement}.')
   if length == 1:
     ref = building_blocks.Reference('arg', first_type_signature.member)
     values = building_blocks.Struct(((first_name, ref),), container_type)
@@ -1410,7 +1398,7 @@ def create_federated_zip(
   # If the type signature is flat, just call _create_flat_federated_zip.
   elements = structure.to_elements(value.type_signature)
   if all(type_sig.is_federated() for (_, type_sig) in elements):
-    _check_placements(set(type_sig.placement for (_, type_sig) in elements))
+    _check_placements({type_sig.placement for (_, type_sig) in elements})
     return _create_flat_federated_zip(value)
 
   all_placements = set()
@@ -1502,8 +1490,8 @@ def create_generic_constant(
   if (not inferred_scalar_value_type.is_tensor() or
       inferred_scalar_value_type.shape != tf.TensorShape(())):
     raise TypeError(
-        'Must pass a scalar value to `create_generic_constant`; encountered a '
-        'value {}'.format(scalar_value))
+        f'Must pass a scalar value to `create_generic_constant`; encountered a value {scalar_value}'
+    )
   if not type_analysis.contains_only(
       type_spec, lambda t: t.is_federated() or t.is_struct() or t.is_tensor()):
     raise TypeError
@@ -1528,18 +1516,18 @@ def create_generic_constant(
           intrinsic_defs.FEDERATED_VALUE_AT_SERVER.uri, placement_fn_type)
     return building_blocks.Call(placement_function, unplaced_zero)
   elif type_spec.is_struct():
-    elements = []
-    for k in range(len(type_spec)):
-      elements.append(create_generic_constant(type_spec[k], scalar_value))
+    elements = [
+        create_generic_constant(type_spec[k], scalar_value)
+        for k in range(len(type_spec))
+    ]
     names = [name for name, _ in structure.iter_elements(type_spec)]
     packed_elements = building_blocks.Struct(elements)
-    named_tuple = create_named_tuple(packed_elements, names,
-                                     type_spec.python_container)
-    return named_tuple
+    return create_named_tuple(packed_elements, names,
+                              type_spec.python_container)
   else:
     raise ValueError(
-        'The type_spec {} has slipped through all our '
-        'generic constant cases, and failed to raise.'.format(type_spec))
+        f'The type_spec {type_spec} has slipped through all our generic constant cases, and failed to raise.'
+    )
 
 
 def create_zip_two_values(
@@ -1576,8 +1564,8 @@ def create_zip_two_values(
   length = len(named_type_signatures)
   if length != 2:
     raise ValueError(
-        'Expected a value with exactly two elements, received {} elements.'
-        .format(named_type_signatures))
+        f'Expected a value with exactly two elements, received {named_type_signatures} elements.'
+    )
   placement = value.type_signature[0].placement
   if placement is placements.CLIENTS:
     uri = intrinsic_defs.FEDERATED_ZIP_AT_CLIENTS.uri
@@ -1586,7 +1574,7 @@ def create_zip_two_values(
     uri = intrinsic_defs.FEDERATED_ZIP_AT_SERVER.uri
     all_equal = True
   else:
-    raise TypeError('Unsupported placement {}.'.format(placement))
+    raise TypeError(f'Unsupported placement {placement}.')
   elements = []
   for _, type_signature in named_type_signatures:
     federated_type = computation_types.FederatedType(type_signature.member,
@@ -1774,8 +1762,9 @@ def create_named_federated_tuple(
   """
   py_typecheck.check_type(names_to_add, (list, tuple))
   if not all((x is None or isinstance(x, str)) for x in names_to_add):
-    raise TypeError('`names_to_add` must contain only instances of `str` or '
-                    'NoneType; you have passed in {}'.format(names_to_add))
+    raise TypeError(
+        f'`names_to_add` must contain only instances of `str` or NoneType; you have passed in {names_to_add}'
+    )
   py_typecheck.check_type(tuple_to_name,
                           building_blocks.ComputationBuildingBlock)
   py_typecheck.check_type(tuple_to_name.type_signature,
@@ -1820,8 +1809,9 @@ def create_named_tuple(
   """
   py_typecheck.check_type(names, (list, tuple))
   if not all(isinstance(x, (str, type(None))) for x in names):
-    raise TypeError('Expected `names` containing only instances of `str` or '
-                    '`None`, found {}'.format(names))
+    raise TypeError(
+        f'Expected `names` containing only instances of `str` or `None`, found {names}'
+    )
   py_typecheck.check_type(comp, building_blocks.ComputationBuildingBlock)
   py_typecheck.check_type(comp.type_signature, computation_types.StructType)
   fn = _create_naming_function(comp.type_signature, names, container_type)
@@ -1865,8 +1855,8 @@ def create_zip(
     py_typecheck.check_type(type_signature, computation_types.StructType)
     if len(type_signature) != length:
       raise TypeError(
-          'Expected a StructType containing StructTypes with the same '
-          'length, found: {}'.format(comp.type_signature))
+          f'Expected a StructType containing StructTypes with the same length, found: {comp.type_signature}'
+      )
   if not comp.is_reference():
     name_generator = unique_name_generator(comp)
     name = next(name_generator)
@@ -1894,22 +1884,17 @@ def _check_generic_operator_type(type_spec):
   if not type_analysis.contains_only(
       type_spec, lambda t: t.is_federated() or t.is_struct() or t.is_tensor()):
     raise TypeError(
-        'Generic operators are only implemented for arguments both containing '
-        'only federated, tuple and tensor types; you have passed an argument '
-        'of type {} '.format(type_spec))
+        f'Generic operators are only implemented for arguments both containing only federated, tuple and tensor types; you have passed an argument of type {type_spec} '
+    )
   if not (type_spec.is_struct() and len(type_spec) == 2):
     raise TypeError(
-        'We are trying to construct a generic operator declaring argument that '
-        'is not a two-tuple, the type {}.'.format(type_spec))
+        f'We are trying to construct a generic operator declaring argument that is not a two-tuple, the type {type_spec}.'
+    )
   if not type_analysis.is_binary_op_with_upcast_compatible_pair(
       type_spec[0], type_spec[1]):
     raise TypeError(
-        'The two-tuple you have passed in is incompatible with upcasted '
-        'binary operators. You have passed the tuple type {}, which fails the '
-        'check that the two members of the tuple are either the same type, or '
-        'the second is a scalar with the same dtype as the leaves of the '
-        'first. See `type_analysis.is_binary_op_with_upcast_compatible_pair` for '
-        'more details.'.format(type_spec))
+        f'The two-tuple you have passed in is incompatible with upcasted binary operators. You have passed the tuple type {type_spec}, which fails the check that the two members of the tuple are either the same type, or the second is a scalar with the same dtype as the leaves of the first. See `type_analysis.is_binary_op_with_upcast_compatible_pair` for more details.'
+    )
 
 
 @functools.lru_cache()
@@ -1938,9 +1923,8 @@ def create_tensorflow_binary_operator_with_upcast(
   type_analysis.check_tensorflow_compatible_type(type_signature)
   tf_proto, type_signature = tensorflow_computation_factory.create_binary_operator_with_upcast(
       type_signature, operator)
-  compiled = building_blocks.CompiledComputation(
-      tf_proto, type_signature=type_signature)
-  return compiled
+  return building_blocks.CompiledComputation(tf_proto,
+                                             type_signature=type_signature)
 
 
 def apply_binary_operator_with_upcast(
@@ -1985,15 +1969,12 @@ def apply_binary_operator_with_upcast(
     tuple_type = arg.type_signature
   else:
     raise TypeError(
-        'Generic binary operators are only implemented for federated tuple and '
-        'unplaced tuples; you have passed {}.'.format(arg.type_signature))
+        f'Generic binary operators are only implemented for federated tuple and unplaced tuples; you have passed {arg.type_signature}.'
+    )
 
   tf_representing_op = create_tensorflow_binary_operator_with_upcast(
       operator, tuple_type)
 
-  if arg.type_signature.is_federated():
-    called = create_federated_map_or_apply(tf_representing_op, arg)
-  else:
-    called = building_blocks.Call(tf_representing_op, arg)
-
-  return called
+  return (create_federated_map_or_apply(tf_representing_op, arg)
+          if arg.type_signature.is_federated() else building_blocks.Call(
+              tf_representing_op, arg))

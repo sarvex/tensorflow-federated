@@ -244,10 +244,8 @@ class SizingExecutorFactory(ResourceManagingExecutorFactory):
     Returns:
       The number of bits represented in the history.
     """
-    bit_size = 0
-    for num_elements, dtype in history:
-      bit_size += num_elements * self._bits_per_element(dtype)
-    return bit_size
+    return sum(num_elements * self._bits_per_element(dtype)
+               for num_elements, dtype in history)
 
 
 # pylint:disable=missing-function-docstring
@@ -305,8 +303,8 @@ class UnplacedExecutorFactory(executor_factory.ExecutorFactory):
   ) -> executor_base.Executor:
     if cardinalities:
       raise ValueError(
-          'Unplaced executors cannot accept nonempty cardinalities as '
-          'arguments. Received cardinalities: {}.'.format(cardinalities))
+          f'Unplaced executors cannot accept nonempty cardinalities as arguments. Received cardinalities: {cardinalities}.'
+      )
     if placement == placements.CLIENTS:
       device = self._get_next_client_device()
     elif placement == placements.SERVER:
@@ -376,10 +374,7 @@ class FederatingExecutorFactory(executor_factory.ExecutorFactory):
       raise ValueError('Number of clients must be nonnegative.')
     self._default_num_clients = default_num_clients
     self._use_sizing = use_sizing
-    if self._use_sizing:
-      self._sizing_executors = []
-    else:
-      self._sizing_executors = None
+    self._sizing_executors = [] if self._use_sizing else None
     self._federated_strategy_factory = federated_strategy_factory
     self._local_computation_factory = local_computation_factory
 
@@ -545,9 +540,8 @@ class ComposingExecutorFactory(executor_factory.ExecutorFactory):
     unplaced_executor = self._unplaced_ex_factory.create_executor()
     composing_executor = federating_executor.FederatingExecutor(
         composing_strategy_factory, unplaced_executor)
-    threaded_composing_executor = _wrap_executor_in_threading_stack(
-        composing_executor, can_resolve_references=False)
-    return threaded_composing_executor
+    return _wrap_executor_in_threading_stack(composing_executor,
+                                             can_resolve_references=False)
 
   def _aggregate_stacks(
       self,
@@ -586,7 +580,7 @@ class ComposingExecutorFactory(executor_factory.ExecutorFactory):
         offset = new_offset
       executors = new_executors
     if len(executors) != 1:
-      raise RuntimeError('Expected 1 executor, got {}.'.format(len(executors)))
+      raise RuntimeError(f'Expected 1 executor, got {len(executors)}.')
     return reference_resolving_executor.ReferenceResolvingExecutor(executors[0])
 
 

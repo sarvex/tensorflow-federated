@@ -108,8 +108,8 @@ class _SequenceFromPayload(_Sequence):
       self._payload = payload
     except Exception as err:
       raise NotImplementedError(
-          'Unrecognized type of payload: {}: returned {} from iter()'.format(
-              py_typecheck.type_string(type(payload)), str(err)))
+          f'Unrecognized type of payload: {py_typecheck.type_string(type(payload))}: returned {str(err)} from iter()'
+      )
 
   async def compute(self):
     return self._payload
@@ -253,8 +253,9 @@ async def _delegate(val, type_spec: computation_types.Type,
     return await target_executor.create_value(await val.compute(), type_spec)
   if isinstance(val, structure.Struct):
     if len(val) != len(type_spec):
-      raise ValueError('Found {} elements and {} types in a struct {}.'.format(
-          len(val), len(type_spec), str(val)))
+      raise ValueError(
+          f'Found {len(val)} elements and {len(type_spec)} types in a struct {str(val)}.'
+      )
     elements = structure.iter_elements(val)
     element_types = structure.iter_elements(type_spec)
     names = []
@@ -262,8 +263,8 @@ async def _delegate(val, type_spec: computation_types.Type,
     for (el_name, el), (el_type_name, el_type) in zip(elements, element_types):
       if el_name != el_type_name:
         raise ValueError(
-            'Element name mismatch between value ({}) and type ({}).'.format(
-                str(val), str(type_spec)))
+            f'Element name mismatch between value ({str(val)}) and type ({str(type_spec)}).'
+        )
       names.append(el_name)
       coros.append(_delegate(el, el_type, target_executor))
     flat_targets = await asyncio.gather(*coros)
@@ -405,8 +406,8 @@ class SequenceExecutor(executor_base.Executor):
       if which_computation == 'intrinsic':
         intrinsic_def = intrinsic_defs.uri_to_intrinsic_def(value.intrinsic.uri)
         if intrinsic_def is None:
-          raise ValueError('Encountered an unrecognized intrinsic "{}".'.format(
-              value.intrinsic.uri))
+          raise ValueError(
+              f'Encountered an unrecognized intrinsic "{value.intrinsic.uri}".')
         op_type = SequenceExecutor._SUPPORTED_INTRINSIC_TO_SEQUENCE_OP.get(
             intrinsic_def.uri)
         if op_type is not None:
@@ -447,9 +448,8 @@ class SequenceExecutor(executor_base.Executor):
       result_type = comp.type_signature.result
       return SequenceExecutorValue(result, result_type)
     raise NotImplementedError(
-        'Unsupported functional representation of type {} (possibly indicating '
-        'a mismatch between structures supported by create_cvalue() and '
-        'create_call()).'.format(py_typecheck.type_string(type(fn))))
+        f'Unsupported functional representation of type {py_typecheck.type_string(type(fn))} (possibly indicating a mismatch between structures supported by create_cvalue() and create_call()).'
+    )
 
   @tracing.trace
   async def create_struct(self, elements):

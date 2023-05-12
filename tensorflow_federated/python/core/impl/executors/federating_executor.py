@@ -133,12 +133,11 @@ class FederatingStrategy(abc.ABC):
     # interface forces subclasses to explicitly implement all of the intrinsics
     # with specificly named methods. In other words, this convenience is safe
     # because this abstract interface owns the names of the methods.
-    fn = getattr(self, 'compute_{}'.format(uri), None)
+    fn = getattr(self, f'compute_{uri}', None)
     if fn is not None:
       return await fn(arg)  # pylint: disable=not-callable
     else:
-      raise NotImplementedError(
-          'The intrinsic \'{}\' is not implemented.'.format(uri))
+      raise NotImplementedError(f"The intrinsic \'{uri}\' is not implemented.")
 
   @abc.abstractmethod
   async def compute_federated_aggregate(
@@ -376,13 +375,13 @@ class FederatingExecutor(executor_base.Executor):
           return self._strategy.ingest_value(value, type_spec)
         intrinsic_def = intrinsic_defs.uri_to_intrinsic_def(value.intrinsic.uri)
         if intrinsic_def is None:
-          raise ValueError('Encountered an unrecognized intrinsic "{}".'.format(
-              value.intrinsic.uri))
+          raise ValueError(
+              f'Encountered an unrecognized intrinsic "{value.intrinsic.uri}".')
         return await self.create_value(intrinsic_def, type_spec)
       else:
         raise ValueError(
-            'Unsupported computation building block of type "{}".'.format(
-                which_computation))
+            f'Unsupported computation building block of type "{which_computation}".'
+        )
     elif type_spec is not None and type_spec.is_federated():
       return await self._strategy.compute_federated_value(value, type_spec)
     else:
@@ -523,6 +522,5 @@ class FederatingExecutor(executor_base.Executor):
       return self._strategy.ingest_value(value, type_signature)
     else:
       raise ValueError(
-          'Unexpected internal representation while creating selection. '
-          'Expected one of `Struct` or value embedded in target '
-          'executor, received {}'.format(source.internal_representation))
+          f'Unexpected internal representation while creating selection. Expected one of `Struct` or value embedded in target executor, received {source.internal_representation}'
+      )

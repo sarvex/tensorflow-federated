@@ -58,7 +58,7 @@ class _XlaSerializerStructArg(structure.Struct, typed_object.TypedObject):
     return self._type_signature
 
   def __str__(self):
-    return '_XlaSerializerStructArg({})'.format(structure.Struct.__str__(self))
+    return f'_XlaSerializerStructArg({structure.Struct.__str__(self)})'
 
 
 def _tff_type_to_xla_serializer_arg(type_spec):

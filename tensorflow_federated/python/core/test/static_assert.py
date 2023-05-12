@@ -23,9 +23,9 @@ from tensorflow_federated.python.core.impl.computation import computation_impl
 
 def _raise_expected_none(calls: List[building_blocks.Call],
                          kind: str) -> Optional[str]:
-  assert len(calls) != 0  # pylint: disable=g-explicit-length-test
-  msg = 'Expected no {} aggregations, found {}:'.format(kind, len(calls))
-  msg += ''.join(('\n\t' + call.compact_representation() for call in calls))
+  assert calls
+  msg = f'Expected no {kind} aggregations, found {len(calls)}:' + ''.join(
+      ('\n\t' + call.compact_representation() for call in calls))
   raise AssertionError(msg)
 
 
@@ -47,10 +47,10 @@ def assert_contains_secure_aggregation(comp):
   py_typecheck.check_type(comp, computation_impl.ConcreteComputation)
   comp = comp.to_building_block()
   calls = tree_analysis.find_secure_aggregation_in_tree(comp)
-  if len(calls) == 0:  # pylint: disable=g-explicit-length-test
+  if len(calls) == 0:# pylint: disable=g-explicit-length-test
     raise AssertionError(
-        'Expected secure aggregation, but none were found in: {}'.format(
-            comp.compact_representation()))
+        f'Expected secure aggregation, but none were found in: {comp.compact_representation()}'
+    )
 
 
 def assert_not_contains_secure_aggregation(comp):
@@ -93,10 +93,10 @@ def assert_contains_unsecure_aggregation(comp):
   py_typecheck.check_type(comp, computation_impl.ConcreteComputation)
   comp = comp.to_building_block()
   calls = tree_analysis.find_unsecure_aggregation_in_tree(comp)
-  if len(calls) == 0:  # pylint: disable=g-explicit-length-test
+  if len(calls) == 0:# pylint: disable=g-explicit-length-test
     raise AssertionError(
-        'Expected unsecure aggregation, but none were found in:\n{}'.format(
-            comp.compact_representation()))
+        f'Expected unsecure aggregation, but none were found in:\n{comp.compact_representation()}'
+    )
 
 
 def assert_not_contains_unsecure_aggregation(comp):

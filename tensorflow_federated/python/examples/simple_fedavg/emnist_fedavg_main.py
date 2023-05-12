@@ -109,7 +109,7 @@ def create_original_fedavg_cnn_model(only_digits=True):
       padding='same',
       data_format=data_format,
       activation=tf.nn.relu)
-  model = tf.keras.models.Sequential([
+  return tf.keras.models.Sequential([
       conv2d(filters=32, input_shape=input_shape),
       max_pool(),
       conv2d(filters=64),
@@ -118,7 +118,6 @@ def create_original_fedavg_cnn_model(only_digits=True):
       tf.keras.layers.Dense(512, activation=tf.nn.relu),
       tf.keras.layers.Dense(10 if only_digits else 62),
   ])
-  return model
 
 
 def server_optimizer_fn():

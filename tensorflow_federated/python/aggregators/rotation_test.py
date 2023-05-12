@@ -81,8 +81,7 @@ def _named_test_cases_product(dict1, dict2):
   """Utility for creating parameterized named test cases."""
   named_cases = []
   for k1, v1 in dict1.items():
-    for k2, v2 in dict2.items():
-      named_cases.append(('_'.join([k1, k2]), v1, v2))
+    named_cases.extend(('_'.join([k1, k2]), v1, v2) for k2, v2 in dict2.items())
   return named_cases
 
 

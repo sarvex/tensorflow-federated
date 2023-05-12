@@ -115,18 +115,16 @@ class FederatedComposingStrategyValue(executor_value_base.ExecutorValue):
         py_typecheck.check_type(value, executor_value_base.ExecutorValue)
       if self._type_signature.all_equal:
         return await self._value[0].compute()
-      else:
-        result = []
-        values = await asyncio.gather(*[v.compute() for v in self._value])
-        for value in values:
-          py_typecheck.check_type(value, list)
-          result.extend(value)
-        return result
+      result = []
+      values = await asyncio.gather(*[v.compute() for v in self._value])
+      for value in values:
+        py_typecheck.check_type(value, list)
+        result.extend(value)
+      return result
     else:
       raise RuntimeError(
-          'Computing values of type {} represented as {} is not supported in '
-          'this executor.'.format(self._type_signature,
-                                  py_typecheck.type_string(type(self._value))))
+          f'Computing values of type {self._type_signature} represented as {py_typecheck.type_string(type(self._value))} is not supported in this executor.'
+      )
 
 
 class FederatedComposingStrategy(federating_executor.FederatingStrategy):
@@ -249,10 +247,7 @@ class FederatedComposingStrategy(federating_executor.FederatingStrategy):
           [client_data, zero_value, add_value, add_value, identity_value])
       call = await executor.create_call(fn, arg)
       result = await call.compute()
-      if isinstance(result, tf.Tensor):
-        return result.numpy()
-      else:
-        return result
+      return result.numpy() if isinstance(result, tf.Tensor) else result
 
     return await asyncio.gather(
         *[_num_clients(c) for c in self._target_executors])
@@ -263,8 +258,8 @@ class FederatedComposingStrategy(federating_executor.FederatingStrategy):
     if type_signature.placement == placements.SERVER:
       if not type_signature.all_equal:
         raise ValueError(
-            'Expected an all equal value at the `SERVER` placement, '
-            'found {}.'.format(type_signature))
+            f'Expected an all equal value at the `SERVER` placement, found {type_signature}.'
+        )
       results = await self._server_executor.create_value(
           value, type_signature.member)
       return FederatedComposingStrategyValue(results, type_signature)
@@ -290,8 +285,7 @@ class FederatedComposingStrategy(federating_executor.FederatingStrategy):
         return FederatedComposingStrategyValue(await asyncio.gather(*results),
                                                type_signature)
     else:
-      raise ValueError('Unexpected placement {}.'.format(
-          type_signature.placement))
+      raise ValueError(f'Unexpected placement {type_signature.placement}.')
 
   @tracing.trace
   async def compute_federated_aggregate(

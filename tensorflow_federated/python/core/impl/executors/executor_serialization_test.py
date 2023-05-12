@@ -151,22 +151,24 @@ class ExecutorServiceUtilsTest(test_case.TestCase, parameterized.TestCase):
     def _make_nested_tf_structure(x):
       return collections.OrderedDict(
           b=tf.cast(x, tf.int32),
-          a=tuple([
+          a=(
               x,
               test_tuple_type(x * 2, x * 3),
-              collections.OrderedDict(x=x**2, y=x**3)
-          ]))
+              collections.OrderedDict(x=x**2, y=x**3),
+          ),
+      )
 
     ds = tf.data.Dataset.range(5).map(_make_nested_tf_structure)
     ds_repr = ds_repr_fn(ds)
     element_type = computation_types.to_type(
         collections.OrderedDict(
             b=tf.int32,
-            a=tuple([
+            a=(
                 tf.int64,
                 test_tuple_type(tf.int64, tf.int64),
                 collections.OrderedDict(x=tf.int64, y=tf.int64),
-            ])))
+            ),
+        ))
     sequence_type = computation_types.SequenceType(element=element_type)
     value_proto, value_type = executor_serialization.serialize_value(
         ds_repr, sequence_type)
@@ -179,11 +181,12 @@ class ExecutorServiceUtilsTest(test_case.TestCase, parameterized.TestCase):
     def _build_expected_structure(x):
       return collections.OrderedDict(
           b=x,
-          a=tuple([
+          a=(
               x,
               test_tuple_type(x * 2, x * 3),
-              collections.OrderedDict(x=x**2, y=x**3)
-          ]))
+              collections.OrderedDict(x=x**2, y=x**3),
+          ),
+      )
 
     actual_values = list(y)
     expected_values = [_build_expected_structure(x) for x in range(5)]

@@ -38,8 +38,7 @@ def _get_first_logical_device(
   if device_type is None:
     return None
   tf_devices = tf.config.list_logical_devices(device_type=device_type)
-  device = tf_devices[0] if tf_devices else None
-  return device
+  return tf_devices[0] if tf_devices else None
 
 
 class EmbedTfCompTest(test_case.TestCase, parameterized.TestCase):

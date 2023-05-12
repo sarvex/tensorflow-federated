@@ -63,18 +63,21 @@ class DataExecutor(executor_base.Executor):
     Returns:
       A value embedded in the target executor.
     """
-    if isinstance(value, pb.Computation):
-      if value.WhichOneof('computation') == 'data':
-        value_type = type_serialization.deserialize_type(value.type)
-        if type_spec is not None:
-          type_spec.check_equivalent_to(value_type)
-        else:
-          type_spec = value_type
-        payload = await self._data_backend.materialize(value.data, type_spec)
-        return await self._target_executor.create_value(payload, type_spec)
+    if (isinstance(value, pb.Computation)
+        and value.WhichOneof('computation') == 'data'):
+      value_type = type_serialization.deserialize_type(value.type)
+      if type_spec is not None:
+        type_spec.check_equivalent_to(value_type)
       else:
-        return await self._target_executor.create_value(value, type_spec)
-    elif isinstance(type_spec, computation_types.StructType):
+        type_spec = value_type
+      payload = await self._data_backend.materialize(value.data, type_spec)
+      return await self._target_executor.create_value(payload, type_spec)
+    elif (isinstance(value, pb.Computation)
+          and value.WhichOneof('computation') != 'data'
+          or not isinstance(value, pb.Computation)
+          and not isinstance(type_spec, computation_types.StructType)):
+      return await self._target_executor.create_value(value, type_spec)
+    else:
       if not isinstance(value, structure.Struct):
         value = structure.from_container(value)
       elements = structure.flatten(value)
@@ -85,8 +88,6 @@ class DataExecutor(executor_base.Executor):
       ])
       embedded_struct = structure.pack_sequence_as(value, flat_embedded_vals)
       return await self._target_executor.create_struct(embedded_struct)
-    else:
-      return await self._target_executor.create_value(value, type_spec)
 
   @tracing.trace
   async def create_call(self, comp, arg=None):

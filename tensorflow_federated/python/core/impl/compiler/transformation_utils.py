@@ -116,7 +116,7 @@ def transform_postorder(comp, transform):
     return comp, comp_modified or variables_modified or result_modified
   else:
     raise NotImplementedError(
-        'Unrecognized computation building block: {}'.format(str(comp)))
+        f'Unrecognized computation building block: {str(comp)}')
 
 
 TransformReturnType = Tuple[building_blocks.ComputationBuildingBlock, bool]
@@ -218,7 +218,7 @@ def transform_preorder(
                                  transformed_result), True
   else:
     raise NotImplementedError(
-        'Unrecognized computation building block: {}'.format(str(inner_comp)))
+        f'Unrecognized computation building block: {str(inner_comp)}')
 
 
 def transform_postorder_with_symbol_bindings(comp, transform, symbol_tree):
@@ -444,10 +444,7 @@ class SymbolTree(object):
     while comp.parent is not None or comp.older_sibling is not None:
       if name == comp.payload.name:
         return comp.payload
-      if comp.older_sibling is not None:
-        comp = comp.older_sibling
-      elif comp.parent is not None:
-        comp = comp.parent
+      comp = comp.older_sibling if comp.older_sibling is not None else comp.parent
     return None
 
   def get_higher_payloads_with_value(self, value, equal_fn=None):
@@ -495,8 +492,7 @@ class SymbolTree(object):
         comp = comp.older_sibling
       elif comp.parent is not None:
         comp = comp.parent
-    raise ValueError('The name \'{}\' is not available in \'{}\'.'.format(
-        name, self))
+    raise ValueError(f"The name \'{name}\' is not available in \'{self}\'.")
 
   def walk_to_scope_beginning(self):
     """Walks `active_node` back to the sentinel node beginning current scope.
@@ -555,9 +551,7 @@ class SymbolTree(object):
     if self.active_node.children.get(comp_id) is None:
       node = SequentialBindingNode(_BeginScopePointer())
       self._add_child(comp_id, node)
-      self._move_to_child(comp_id)
-    else:
-      self._move_to_child(comp_id)
+    self._move_to_child(comp_id)
 
   def walk_down_one_variable_binding(self):
     """Moves `active_node` to the younger sibling of the current active node.
@@ -576,8 +570,7 @@ class SymbolTree(object):
       self.active_node = self.active_node.younger_sibling
     else:
       raise ValueError(
-          'You have tried to move to a nonexistent variable binding in {}'
-          .format(self))
+          f'You have tried to move to a nonexistent variable binding in {self}')
 
   def ingest_variable_binding(self, name, value):
     """Constructs or updates node in symbol tree as AST is walked.
@@ -621,10 +614,8 @@ class SymbolTree(object):
     else:
       if self.active_node.younger_sibling.payload.name != name:
         raise ValueError(
-            'You have a mismatch between your symbol tree and the '
-            'computation you are trying to process; your symbol tree is {} '
-            'and you are looking for a BoundVariableTracker with name {} '
-            'and value {}'.format(self, name, value))
+            f'You have a mismatch between your symbol tree and the computation you are trying to process; your symbol tree is {self} and you are looking for a BoundVariableTracker with name {name} and value {value}'
+        )
       self.walk_down_one_variable_binding()
       self.active_node.payload.value = value
 
@@ -633,8 +624,8 @@ class SymbolTree(object):
     py_typecheck.check_type(comp_tracker, SequentialBindingNode)
     if self._node_ids.get(id(comp_tracker)):
       raise ValueError(
-          'Each instance of {} can only appear once in a given symbol tree.'
-          .format(self.payload_type))
+          f'Each instance of {self.payload_type} can only appear once in a given symbol tree.'
+      )
     self.active_node = typing.cast(SequentialBindingNode, self.active_node)
     if self.active_node.younger_sibling is not None:
       raise ValueError('Ambiguity in adding a younger sibling')
@@ -661,9 +652,9 @@ class SymbolTree(object):
     """
     py_typecheck.check_type(comp_tracker, SequentialBindingNode)
     if self._node_ids.get(id(comp_tracker)):
-      raise ValueError('Each node can only appear once in a given'
-                       'symbol tree. You have tried to add {} '
-                       'twice.'.format(comp_tracker.payload))
+      raise ValueError(
+          f'Each node can only appear once in a givensymbol tree. You have tried to add {comp_tracker.payload} twice.'
+      )
     self.active_node = typing.cast(SequentialBindingNode, self.active_node)
     comp_tracker.set_parent(self.active_node)
     self.active_node.add_child(constructing_comp_id, comp_tracker)
@@ -729,11 +720,8 @@ class SymbolTree(object):
   def _string_under_node(self, node) -> str:
     """Rescursive helper function to generate string reps of `SymbolTree`s."""
     py_typecheck.check_type(node, SequentialBindingNode)
-    if node is self.active_node:
-      active_node_indicator = '*'
-    else:
-      active_node_indicator = ''
-    symbol_tree_string = '[' + str(node.payload) + active_node_indicator + ']'
+    active_node_indicator = '*' if node is self.active_node else ''
+    symbol_tree_string = f'[{str(node.payload)}{active_node_indicator}]'
     if node.children:
       symbol_tree_string += '->{'
       for _, child_node in node.children.items():
@@ -744,7 +732,7 @@ class SymbolTree(object):
       symbol_tree_string = symbol_tree_string[:-2]
       symbol_tree_string += '}'
     if node.younger_sibling:
-      symbol_tree_string += '-' + self._string_under_node(node.younger_sibling)
+      symbol_tree_string += f'-{self._string_under_node(node.younger_sibling)}'
     return symbol_tree_string
 
   def __str__(self):
@@ -1035,8 +1023,7 @@ class ReferenceCounter(BoundVariableTracker):
     self.count += 1
 
   def __str__(self):
-    return 'Instance count: {}; value: {}; name: {}.'.format(
-        self.count, self.value, self.name)
+    return f'Instance count: {self.count}; value: {self.value}; name: {self.name}.'
 
   def __repr__(self):
     return str(self)
@@ -1046,9 +1033,7 @@ class ReferenceCounter(BoundVariableTracker):
       return True
     if not isinstance(other, ReferenceCounter):
       return NotImplemented
-    if not super().__eq__(other):
-      return False
-    return self.count == other.count
+    return False if not super().__eq__(other) else self.count == other.count
 
 
 class TrackRemovedReferences(BoundVariableTracker):
@@ -1066,8 +1051,7 @@ class TrackRemovedReferences(BoundVariableTracker):
     self._removed = True
 
   def __str__(self):
-    return 'Name: {}; value: {}; removed: {}'.format(self.name, self.value,
-                                                     self.removed)
+    return f'Name: {self.name}; value: {self.value}; removed: {self.removed}'
 
 
 def get_count_of_references_to_variables(comp):
@@ -1143,7 +1127,7 @@ def get_map_of_unbound_references(
   def _update(comp):
     """Updates the Python dict of references."""
     if comp.is_reference():
-      references[comp] = set((comp.name,))
+      references[comp] = {comp.name}
     elif comp.is_block():
       references[comp] = set()
       names = []
@@ -1160,7 +1144,7 @@ def get_map_of_unbound_references(
       references[comp] = elements
     elif comp.is_lambda():
       elements = references[comp.result]
-      references[comp] = set([e for e in elements if e != comp.parameter_name])
+      references[comp] = {e for e in elements if e != comp.parameter_name}
     elif comp.is_selection():
       references[comp] = references[comp.source]
     elif comp.is_struct():

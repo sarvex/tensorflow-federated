@@ -480,8 +480,7 @@ def reconcile_value_type_with_type_spec(
   if type_spec is not None:
     py_typecheck.check_type(value_type, computation_types.Type)
     if not value_type.is_equivalent_to(type_spec):
-      raise TypeError('Expected a value of type {}, found {}.'.format(
-          type_spec, value_type))
+      raise TypeError(f'Expected a value of type {type_spec}, found {value_type}.')
   return type_spec if type_spec is not None else value_type
 
 

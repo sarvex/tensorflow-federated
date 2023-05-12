@@ -99,6 +99,4 @@ def parameter_count_from_model(
   """Computes count of trainable parameters for a `model`."""
   weights_type = weights_type_from_model(model)
   trainable_weights_type = weights_type.trainable
-  tensors_and_params = type_analysis.count_tensors_in_type(
-      trainable_weights_type)
-  return tensors_and_params
+  return type_analysis.count_tensors_in_type(trainable_weights_type)

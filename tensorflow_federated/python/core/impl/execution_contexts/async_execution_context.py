@@ -99,16 +99,14 @@ async def _ingest(executor, val, type_spec):
     t_elem = structure.to_elements(type_spec)
     if len(v_elem) != len(t_elem):
       raise TypeError(
-          'Value {} does not match type {}: mismatching tuple length.'.format(
-              val, type_spec))
-    for ((vk, _), (tk, _)) in zip(v_elem, t_elem):
+          f'Value {val} does not match type {type_spec}: mismatching tuple length.'
+      )
+    for (vk, _), (tk, _) in zip(v_elem, t_elem):
       if vk not in [tk, None]:
         raise TypeError(
-            'Value {} does not match type {}: mismatching tuple element '
-            'names {} vs. {}.'.format(val, type_spec, vk, tk))
-    ingested = []
-    for (_, v), (_, t) in zip(v_elem, t_elem):
-      ingested.append(_ingest(executor, v, t))
+            f'Value {val} does not match type {type_spec}: mismatching tuple element names {vk} vs. {tk}.'
+        )
+    ingested = [_ingest(executor, v, t) for (_, v), (_, t) in zip(v_elem, t_elem)]
     ingested = await asyncio.gather(*ingested)
     return await executor.create_struct(
         structure.Struct(

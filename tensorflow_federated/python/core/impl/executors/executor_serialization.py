@@ -203,10 +203,7 @@ def _serialize_federated_value(
     federated_value: Any,
     type_spec: computation_types.FederatedType) -> _SerializeReturnType:
   """Serializes a value of federated type."""
-  if type_spec.all_equal:
-    value = [federated_value]
-  else:
-    value = federated_value
+  value = [federated_value] if type_spec.all_equal else federated_value
   py_typecheck.check_type(value, list)
   items = []
   for v in value:
@@ -265,9 +262,8 @@ def serialize_value(
     return _serialize_federated_value(value, type_spec)
   else:
     raise ValueError(
-        'Unable to serialize value with Python type {} and {} TFF type.'.format(
-            str(py_typecheck.type_string(type(value))),
-            str(type_spec) if type_spec is not None else 'unknown'))
+        f"Unable to serialize value with Python type {str(py_typecheck.type_string(type(value)))} and {str(type_spec) if type_spec is not None else 'unknown'} TFF type."
+    )
 
 
 @tracing.trace
@@ -297,7 +293,7 @@ def _deserialize_tensor_value(
   """
   which_value = value_proto.WhichOneof('value')
   if which_value != 'tensor':
-    raise ValueError('Not a tensor value: {}'.format(which_value))
+    raise ValueError(f'Not a tensor value: {which_value}')
 
   # TODO(b/134543154): Find some way of creating the `TensorProto` using a
   # proper public interface rather than creating a whimsy value that we will
@@ -492,15 +488,13 @@ def _ensure_deserialized_types_compatible(
   """
   if previous_type is None:
     return next_type
-  else:
-    if next_type.is_assignable_from(previous_type):
-      return next_type
-    elif previous_type.is_assignable_from(next_type):
-      return previous_type
-    raise TypeError('Type mismatch checking member assignability under a '
-                    'federated value. Deserialized type {} is incompatible '
-                    'with previously deserialized {}.'.format(
-                        next_type, previous_type))
+  if next_type.is_assignable_from(previous_type):
+    return next_type
+  elif previous_type.is_assignable_from(next_type):
+    return previous_type
+  raise TypeError(
+      f'Type mismatch checking member assignability under a federated value. Deserialized type {next_type} is incompatible with previously deserialized {previous_type}.'
+  )
 
 
 @tracing.trace
@@ -524,8 +518,8 @@ def _deserialize_federated_value(
       value = value[0]
     else:
       raise ValueError(
-          'Encountered an all_equal value with {} member constituents. '
-          'Expected exactly 1.'.format(len(value)))
+          f'Encountered an all_equal value with {len(value)} member constituents. Expected exactly 1.'
+      )
   type_spec = computation_types.FederatedType(
       item_type,
       placement=placements.uri_to_placement_literal(placement_uri),
@@ -566,8 +560,7 @@ def deserialize_value(
   elif which_value == 'federated':
     return _deserialize_federated_value(value_proto)
   else:
-    raise ValueError(
-        'Unable to deserialize a value of type {}.'.format(which_value))
+    raise ValueError(f'Unable to deserialize a value of type {which_value}.')
 
 
 CardinalitiesType = Mapping[placements.PlacementLiteral, int]

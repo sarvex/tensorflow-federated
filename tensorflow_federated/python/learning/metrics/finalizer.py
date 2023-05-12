@@ -120,8 +120,7 @@ def check_keras_metric_config_constructable(
   init_args = inspect.getfullargspec(metric.__init__).args
   init_args.remove('self')
   get_config_args = metric.get_config().keys()
-  extra_args = [arg for arg in init_args if arg not in get_config_args]
-  if extra_args:
+  if extra_args := [arg for arg in init_args if arg not in get_config_args]:
     # TODO(b/197746608): Updates the error message to redirect users to use
     # metric constructors instead of constructed metrics when we support both
     # cases in `from_keras_model`.

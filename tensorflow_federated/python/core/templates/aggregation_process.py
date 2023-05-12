@@ -118,8 +118,7 @@ class AggregationProcess(measured_process.MeasuredProcess):
     next_types = (
         structure.flatten(next_fn.type_signature.parameter) +
         structure.flatten(next_fn.type_signature.result))
-    non_federated_types = [t for t in next_types if not t.is_federated()]
-    if non_federated_types:
+    if non_federated_types := [t for t in next_types if not t.is_federated()]:
       offending_types_str = '\n- '.join(str(t) for t in non_federated_types)
       raise AggregationNotFederatedError(
           f'Provided `next_fn` must both be a *federated* computations, that '

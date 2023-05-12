@@ -42,8 +42,7 @@ def _construct_simple_block(type_signature):
   """Constructs minimal example of LET construct in TFF."""
   test_arg = building_blocks.Data('data', type_signature)
   result = building_blocks.Reference('x', test_arg.type_signature)
-  simple_block = building_blocks.Block([('x', test_arg)], result)
-  return simple_block
+  return building_blocks.Block([('x', test_arg)], result)
 
 
 class UpdatableTracker(transformation_utils.BoundVariableTracker):
@@ -89,9 +88,8 @@ class TrivialBoundVariableTracker(transformation_utils.BoundVariableTracker):
 
 
 def _construct_trivial_instance_of_all_computation_building_blocks():
-  cbb_list = []
   ref_to_x = building_blocks.Reference('x', tf.int32)
-  cbb_list.append(('reference', ref_to_x))
+  cbb_list = [('reference', ref_to_x)]
   lam = building_blocks.Lambda('x', tf.int32, ref_to_x)
   cbb_list.append(('lambda', lam))
   block = building_blocks.Block([('x', ref_to_x)], lam)

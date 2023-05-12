@@ -89,7 +89,7 @@ class ReferenceResolvingExecutorScope:
     if parent is not None:
       py_typecheck.check_type(parent, ReferenceResolvingExecutorScope)
     self._parent = parent
-    self._symbols = {k: v for k, v in symbols.items()}
+    self._symbols = dict(symbols.items())
 
   async def resolve_reference(self, name):
     """Resolves the given reference `name` in this scope.
@@ -111,8 +111,7 @@ class ReferenceResolvingExecutorScope:
     elif self._parent is not None:
       return await self._parent.resolve_reference(name)
     else:
-      raise ValueError(
-          'The name \'{}\' is not defined in this scope.'.format(name))
+      raise ValueError(f"The name \'{name}\' is not defined in this scope.")
 
 
 class ScopedLambda():
@@ -225,10 +224,8 @@ class ReferenceResolvingExecutorValue(executor_value_base.ExecutorValue):
   async def compute(self):
     if self._type_signature.is_function():
       raise TypeError(
-          'Materializing a computed value of a functional TFF type {} is not '
-          'possible; only non-functional values can be materialized. Did you '
-          'perhaps forget to __call__() a function you declared?'.format(
-              str(self._type_signature)))
+          f'Materializing a computed value of a functional TFF type {str(self._type_signature)} is not possible; only non-functional values can be materialized. Did you perhaps forget to __call__() a function you declared?'
+      )
     elif isinstance(self._value, executor_value_base.ExecutorValue):
       return await self._value.compute()
     else:
@@ -322,10 +319,9 @@ class ReferenceResolvingExecutor(executor_base.Executor):
       py_typecheck.check_type(arg, ReferenceResolvingExecutorValue)
       arg_type = arg.type_signature
       if not param_type.is_assignable_from(arg_type):
-        raise TypeError('ReferenceResolvingExecutor asked to create call with '
-                        'incompatible type specifications. Function '
-                        'takes an argument of type {}, but was supplied '
-                        'an argument of type {}'.format(param_type, arg_type))
+        raise TypeError(
+            f'ReferenceResolvingExecutor asked to create call with incompatible type specifications. Function takes an argument of type {param_type}, but was supplied an argument of type {arg_type}'
+        )
 
     comp_repr = comp.internal_representation
     if isinstance(comp_repr, executor_value_base.ExecutorValue):
@@ -341,8 +337,8 @@ class ReferenceResolvingExecutor(executor_base.Executor):
       return await comp_repr.invoke(self, arg)
     else:
       raise TypeError(
-          'Unexpected type to ReferenceResolvingExecutor create_call: {}'
-          .format(type(comp_repr)))
+          f'Unexpected type to ReferenceResolvingExecutor create_call: {type(comp_repr)}'
+      )
 
   @tracing.trace(stats=False)
   async def _embed_value_in_target_exec(
@@ -390,11 +386,8 @@ class ReferenceResolvingExecutor(executor_base.Executor):
         tree = building_blocks.ComputationBuildingBlock.from_proto(
             value_repr.comp)
         raise RuntimeError(
-            'lambda passed to intrinsic contains references to captured '
-            'variables. This is not currently supported. For more information, '
-            'see b/148685415. '
-            'Found references {} in computation {} with type {}'.format(
-                unbound_refs, tree, tree.type_signature))
+            f'lambda passed to intrinsic contains references to captured variables. This is not currently supported. For more information, see b/148685415. Found references {unbound_refs} in computation {tree} with type {tree.type_signature}'
+        )
       return await self._target_executor.create_value(value_repr.comp,
                                                       value.type_signature)
 
@@ -511,4 +504,4 @@ class ReferenceResolvingExecutor(executor_base.Executor):
       return await self._evaluate_block(comp, scope)
     else:
       raise NotImplementedError(
-          'Unsupported computation type "{}".'.format(which_computation))
+          f'Unsupported computation type "{which_computation}".')

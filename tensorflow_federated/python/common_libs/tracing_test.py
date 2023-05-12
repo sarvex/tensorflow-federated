@@ -198,10 +198,7 @@ class MockTracingProvider(tracing.TracingProvider):
     self.fn_argss.append(fn_args)
     self.fn_kwargss.append(fn_kwargs)
     self.trace_optss.append(trace_opts)
-    if parent_span_yield is None:
-      new_yield = 0
-    else:
-      new_yield = parent_span_yield + 1
+    new_yield = 0 if parent_span_yield is None else parent_span_yield + 1
     result = yield new_yield
     self.trace_results.append(result)
 

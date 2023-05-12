@@ -201,7 +201,6 @@ class ComputeIntrinsicFederatedWeightedMeanTest(
            clients_per_stack=3, stacks_per_layer=3, num_layers=3),
        27),
   ])
-  # pyformat: enable
   def test_computes_weighted_mean(
       self,
       executor,
@@ -211,7 +210,7 @@ class ComputeIntrinsicFederatedWeightedMeanTest(
         num_clients)
 
     # Weighted mean computed in Python
-    expected_result = sum([x**2 for x in value]) / sum(value)
+    expected_result = sum(x**2 for x in value) / sum(value)
 
     value = self.run_sync(executor.create_value(value, type_signature))
     arg = self.run_sync(executor.create_struct([value, value]))

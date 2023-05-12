@@ -49,9 +49,7 @@ def _to_sparse_indices_format(hash_indices: tf.Tensor) -> tf.Tensor:
   column_indices = tf.tile(column_indices, [input_length, 1, 1])
   column_indices = tf.cast(column_indices, dtype=tf.int64)
 
-  sparse_indices = tf.concat([row_indices, column_indices, hash_indices],
-                             axis=2)
-  return sparse_indices
+  return tf.concat([row_indices, column_indices, hash_indices], axis=2)
 
 
 class RandomHyperEdgeHasher():
@@ -96,11 +94,10 @@ class RandomHyperEdgeHasher():
     """
     all_hash_indices = []
     for data_string in data_strings:
-      hash_indices = []
-      for i in range(self._repetitions):
-        hash_indices.append(
-            farmhash.fingerprint64(str(self._salt[i]) + data_string) %
-            self._table_size)
+      hash_indices = [
+          farmhash.fingerprint64(str(self._salt[i]) + data_string) %
+          self._table_size for i in range(self._repetitions)
+      ]
       all_hash_indices.append(hash_indices)
 
     return all_hash_indices
@@ -125,8 +122,7 @@ class RandomHyperEdgeHasher():
           tf.strings.to_hash_bucket_fast(
               salted_input[i], num_buckets=self._table_size))
 
-    sparse_indices = _to_sparse_indices_format(hash_indices)
-    return sparse_indices
+    return _to_sparse_indices_format(hash_indices)
 
 
 class CoupledHyperEdgeHasher():
@@ -194,10 +190,10 @@ class CoupledHyperEdgeHasher():
       hash_indices: vector of `repetitions` hash values of `data_string`,
       in {0,...,`table_size`-1}.
     """
-    all_hash_indices = []
-    for data_string in data_strings:
-      all_hash_indices.append(self._get_hash_indices_single(data_string))
-    return all_hash_indices
+    return [
+        self._get_hash_indices_single(data_string)
+        for data_string in data_strings
+    ]
 
   def _hash_to_float(self,
                      input_string: str,
@@ -224,8 +220,7 @@ class CoupledHyperEdgeHasher():
     (low, high) = hash_range
     hashed_value = farmhash.fingerprint64(input_string)
     hashed_value = hashed_value % precision
-    hashed_value = ((float(hashed_value) / precision) * (high - low)) + low
-    return hashed_value
+    return ((float(hashed_value) / precision) * (high - low)) + low
 
   def _hash_to_float_tf(self,
                         input_strings: tf.Tensor,
@@ -250,9 +245,7 @@ class CoupledHyperEdgeHasher():
     hashed_value = tf.strings.to_hash_bucket_fast(
         input_strings, num_buckets=precision)
     hashed_value = hashed_value % precision
-    hashed_value = ((tf.cast(hashed_value, tf.float32) / precision) *
-                    (high - low)) + low
-    return hashed_value
+    return ((tf.cast(hashed_value, tf.float32) / precision) * (high - low)) + low
 
   def get_hash_indices_tf(self, data_strings):
     """Returns Tensor containing hash-position of `(input string, repetition)`.
@@ -275,5 +268,4 @@ class CoupledHyperEdgeHasher():
       hash_indices.append(
           tf.floor((positions + offset) * self._rescaled_table_size))
 
-    sparse_indices = _to_sparse_indices_format(hash_indices)
-    return sparse_indices
+    return _to_sparse_indices_format(hash_indices)

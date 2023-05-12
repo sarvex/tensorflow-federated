@@ -625,8 +625,10 @@ class ReferenceContextTest(test_case.TestCase, parameterized.TestCase):
                                                    collections.OrderedDict)))
     input_value = tf.data.Dataset.range(5).map(
         lambda x: collections.OrderedDict(a=x))
-    self.assertAllEqual([i for i in foo(input_value)],
-                        [collections.OrderedDict(a=i * 2) for i in range(5)])
+    self.assertAllEqual(
+        list(foo(input_value)),
+        [collections.OrderedDict(a=i * 2) for i in range(5)],
+    )
 
   def test_tensorflow_computation_with_result_sequence_py_container(self):
 
@@ -640,7 +642,7 @@ class ReferenceContextTest(test_case.TestCase, parameterized.TestCase):
         computation_types.SequenceType(
             computation_types.StructWithPythonType(
                 collections.OrderedDict(a=tf.int64), collections.OrderedDict)))
-    self.assertAllEqual([i for i in foo()],
+    self.assertAllEqual(list(foo()),
                         [collections.OrderedDict(a=i) for i in range(5)])
 
   def test_tensorflow_computation_with_arg_empty_sequence(self):

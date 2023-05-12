@@ -25,14 +25,13 @@ def _check_tensorflow_computation(label, comp):
   comp_proto = computation_impl.ConcreteComputation.get_proto(comp)
   which_comp = comp_proto.WhichOneof('computation')
   if which_comp != 'tensorflow':
-    raise TypeError('Expected all computations supplied as arguments to '
-                    'be plain TensorFlow, found {}.'.format(which_comp))
+    raise TypeError(
+        f'Expected all computations supplied as arguments to be plain TensorFlow, found {which_comp}.'
+    )
 
 
 def _is_assignable_from_or_both_none(first, second):
-  if first is None:
-    return second is None
-  return first.is_assignable_from(second)
+  return second is None if first is None else first.is_assignable_from(second)
 
 
 def _is_tuple(type_signature: computation_types.Type, length: int) -> bool:
@@ -269,9 +268,8 @@ class MapReduceForm(object):
     init_result_type = initialize.type_signature.result
     if not _is_assignable_from_or_both_none(prepare_arg_type, init_result_type):
       raise TypeError(
-          'The `prepare` computation expects an argument of type {}, '
-          'which does not match the result type {} of `initialize`.'.format(
-              prepare_arg_type, init_result_type))
+          f'The `prepare` computation expects an argument of type {prepare_arg_type}, which does not match the result type {init_result_type} of `initialize`.'
+      )
 
     _check_accepts_tuple('work', work, 2)
     work_2nd_arg_type = work.type_signature.parameter[1]
@@ -279,10 +277,8 @@ class MapReduceForm(object):
     if not _is_assignable_from_or_both_none(work_2nd_arg_type,
                                             prepare_result_type):
       raise TypeError(
-          'The `work` computation expects an argument tuple with type {} as '
-          'the second element (the initial client state from the server), '
-          'which does not match the result type {} of `prepare`.'.format(
-              work_2nd_arg_type, prepare_result_type))
+          f'The `work` computation expects an argument tuple with type {work_2nd_arg_type} as the second element (the initial client state from the server), which does not match the result type {prepare_result_type} of `prepare`.'
+      )
 
     _check_returns_tuple('work', work, WORK_RESULT_LEN)
 
@@ -295,10 +291,8 @@ class MapReduceForm(object):
                                             work_client_update_type):
 
       raise TypeError(
-          'The `accumulate` computation expects a second argument of type {}, '
-          'which does not match the expected {} as implied by the type '
-          'signature of `work`.'.format(accumulate_2nd_arg_type,
-                                        work_client_update_type))
+          f'The `accumulate` computation expects a second argument of type {accumulate_2nd_arg_type}, which does not match the expected {work_client_update_type} as implied by the type signature of `work`.'
+      )
     accumulate.type_signature.parameter[0].check_assignable_from(
         accumulate.type_signature.result)
 
@@ -326,10 +320,8 @@ class MapReduceForm(object):
     if not _is_assignable_from_or_both_none(update.type_signature.parameter,
                                             expected_update_parameter_type):
       raise TypeError(
-          'The `update` computation expects an argument of type {}, '
-          'which does not match the expected {} as implied by the type '
-          'signatures of `initialize`, `report`, and `work`.'.format(
-              update.type_signature.parameter, expected_update_parameter_type))
+          f'The `update` computation expects an argument of type {update.type_signature.parameter}, which does not match the expected {expected_update_parameter_type} as implied by the type signatures of `initialize`, `report`, and `work`.'
+      )
 
     _check_returns_tuple('update', update, 2)
 
@@ -420,12 +412,12 @@ class MapReduceForm(object):
     # of `work`.
     _, secagg_bitwidth_type, secagg_max_input_type, secagg_modulus_type = (
         self.work.type_signature.result)
-    for secagg_type in [
-        secagg_bitwidth_type, secagg_max_input_type, secagg_modulus_type
-    ]:
-      if type_analysis.contains_tensor_types(secagg_type):
-        return True
-    return False
+    return any(
+        type_analysis.contains_tensor_types(secagg_type) for secagg_type in [
+            secagg_bitwidth_type,
+            secagg_max_input_type,
+            secagg_modulus_type,
+        ])
 
   def summary(self, print_fn=print):
     """Prints a string summary of the `MapReduceForm`.

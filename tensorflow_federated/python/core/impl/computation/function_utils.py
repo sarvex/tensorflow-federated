@@ -48,8 +48,9 @@ def get_signature(
   elif function.is_tf_function(fn):
     return inspect.signature(fn.python_function)
   else:
-    raise TypeError('Expected a Python function or a defun, found {}.'.format(
-        py_typecheck.type_string(type(fn))))
+    raise TypeError(
+        f'Expected a Python function or a defun, found {py_typecheck.type_string(type(fn))}.'
+    )
 
 
 def is_signature_compatible_with_types(signature: inspect.Signature, *args,
@@ -150,7 +151,7 @@ def unpack_args_from_struct(
     TypeError: if 'struct_with_args' is of a wrong type.
   """
   if not is_argument_struct(struct_with_args):
-    raise TypeError('Not an argument struct: {}.'.format(struct_with_args))
+    raise TypeError(f'Not an argument struct: {struct_with_args}.')
   if isinstance(struct_with_args, structure.Struct):
     elements = structure.to_elements(struct_with_args)
   elif isinstance(struct_with_args, typed_object.TypedObject):
@@ -208,51 +209,42 @@ def pack_args_into_struct(
   Raises:
     TypeError: if the arguments are of the wrong computation_types.
   """
-  type_spec = computation_types.to_type(type_spec)
-  if not type_spec:
+  if not (type_spec := computation_types.to_type(type_spec)):
     return structure.Struct([(None, arg) for arg in args] +
                             list(kwargs.items()))
-  else:
-    py_typecheck.check_type(type_spec, computation_types.StructType)
-    py_typecheck.check_type(context, context_base.Context)
-    context = typing.cast(context_base.Context, context)
-    if not is_argument_struct(type_spec):  # pylint: disable=attribute-error
-      raise TypeError(
-          'Parameter type {} does not have a structure of an argument struct, '
-          'and cannot be populated from multiple positional and keyword '
-          'arguments'.format(type_spec))
+  py_typecheck.check_type(type_spec, computation_types.StructType)
+  py_typecheck.check_type(context, context_base.Context)
+  context = typing.cast(context_base.Context, context)
+  if not is_argument_struct(type_spec):
+    raise TypeError(
+        f'Parameter type {type_spec} does not have a structure of an argument struct, and cannot be populated from multiple positional and keyword arguments'
+    )
+  result_elements = []
+  positions_used = set()
+  keywords_used = set()
+  for index, (name, elem_type) in enumerate(structure.to_elements(type_spec)):
+    if index < len(args):
+      if name is not None and name in kwargs:
+        raise TypeError(f'Argument `{name}` specified twice.')
+      arg_value = args[index]
+      result_elements.append((name, context.ingest(arg_value, elem_type)))
+      positions_used.add(index)
+    elif name is not None and name in kwargs:
+      # This argument is present in `kwargs`.
+      arg_value = kwargs[name]
+      result_elements.append((name, context.ingest(arg_value, elem_type)))
+      keywords_used.add(name)
+    elif name:
+      raise TypeError(f'Missing argument `{name}` of type {elem_type}.')
     else:
-      result_elements = []
-      positions_used = set()
-      keywords_used = set()
-      for index, (name,
-                  elem_type) in enumerate(structure.to_elements(type_spec)):
-        if index < len(args):
-          # This argument is present in `args`.
-          if name is not None and name in kwargs:
-            raise TypeError('Argument `{}` specified twice.'.format(name))
-          else:
-            arg_value = args[index]
-            result_elements.append((name, context.ingest(arg_value, elem_type)))
-            positions_used.add(index)
-        elif name is not None and name in kwargs:
-          # This argument is present in `kwargs`.
-          arg_value = kwargs[name]
-          result_elements.append((name, context.ingest(arg_value, elem_type)))
-          keywords_used.add(name)
-        elif name:
-          raise TypeError(f'Missing argument `{name}` of type {elem_type}.')
-        else:
-          raise TypeError(
-              f'Missing argument of type {elem_type} at position {index}.')
-      positions_missing = set(range(len(args))).difference(positions_used)
-      if positions_missing:
-        raise TypeError(
-            f'Positional arguments at {positions_missing} not used.')
-      keywords_missing = set(kwargs.keys()).difference(keywords_used)
-      if keywords_missing:
-        raise TypeError(f'Keyword arguments at {keywords_missing} not used.')
-      return structure.Struct(result_elements)
+      raise TypeError(
+          f'Missing argument of type {elem_type} at position {index}.')
+  if positions_missing := set(range(len(args))).difference(positions_used):
+    raise TypeError(
+        f'Positional arguments at {positions_missing} not used.')
+  if keywords_missing := set(kwargs.keys()).difference(keywords_used):
+    raise TypeError(f'Keyword arguments at {keywords_missing} not used.')
+  return structure.Struct(result_elements)
 
 
 def pack_args(parameter_type, args: Sequence[Any], kwargs: Mapping[str, Any],
@@ -287,33 +279,31 @@ def pack_args(parameter_type, args: Sequence[Any], kwargs: Mapping[str, Any],
       return None
   else:
     parameter_type = computation_types.to_type(parameter_type)
-    if not args and not kwargs:
-      raise TypeError(
-          'Declared a parameter of type {}, but got no arguments.'.format(
-              parameter_type))
-    else:
+    if args or kwargs:
       single_positional_arg = (len(args) == 1) and not kwargs
       if not parameter_type.is_struct():
         # If not a `StructType`, a single positional argument is the only
         # supported call style.
         if not single_positional_arg:
           raise TypeError(
-              'Parameter type {} is compatible only with a single positional '
-              'argument, but found {} positional and {} keyword args.'.format(
-                  parameter_type, len(args), len(kwargs)))
+              f'Parameter type {parameter_type} is compatible only with a single positional argument, but found {len(args)} positional and {len(kwargs)} keyword args.'
+          )
         else:
           arg = args[0]
       elif single_positional_arg:
         arg = args[0]
       elif not is_argument_struct(parameter_type):
         raise TypeError(
-            'Parameter type {} does not have a structure of an argument '
-            'struct, and cannot be populated from multiple positional and '
-            'keyword arguments; please construct a struct before the '
-            'call.'.format(parameter_type))
+            f'Parameter type {parameter_type} does not have a structure of an argument struct, and cannot be populated from multiple positional and keyword arguments; please construct a struct before the call.'
+        )
       else:
         arg = pack_args_into_struct(args, kwargs, parameter_type, context)
       return context.ingest(arg, parameter_type)
+
+    else:
+      raise TypeError(
+          f'Declared a parameter of type {parameter_type}, but got no arguments.'
+      )
 
 
 def _infer_unpack_needed(fn: types.FunctionType,
@@ -343,11 +333,10 @@ def _infer_unpack_needed(fn: types.FunctionType,
   unpack_required = not is_signature_compatible_with_types(
       signature, parameter_type)
   # Boolean identity comparison becaue unpack can have a non-boolean value.
-  if unpack_required and should_unpack is False:  # pylint: disable=g-bool-id-comparison
+  if unpack_required and should_unpack is False:# pylint: disable=g-bool-id-comparison
     raise TypeError(
-        'The supplied function \'{}\' with signature {} cannot accept a '
-        'value of type \'{}\' as a single argument.'.format(
-            fn.__name__, signature, parameter_type))
+        f"The supplied function \'{fn.__name__}\' with signature {signature} cannot accept a value of type \'{parameter_type}\' as a single argument."
+    )
   if is_argument_struct(parameter_type):
     arg_types, kwarg_types = unpack_args_from_struct(parameter_type)
     unpack_possible = is_signature_compatible_with_types(
@@ -355,17 +344,14 @@ def _infer_unpack_needed(fn: types.FunctionType,
   else:
     unpack_possible = False
   # Boolean identity comparison becaue unpack can have a non-boolean value.
-  if not unpack_possible and should_unpack is True:  # pylint: disable=g-bool-id-comparison
+  if not unpack_possible and should_unpack is True:# pylint: disable=g-bool-id-comparison
     raise TypeError(
-        'The supplied function with signature {} cannot accept a value of type '
-        '{} as multiple positional and/or keyword arguments. That is, the '
-        'argument cannot be unpacked, but unpacking was requested.'.format(
-            signature, parameter_type))
+        f'The supplied function with signature {signature} cannot accept a value of type {parameter_type} as multiple positional and/or keyword arguments. That is, the argument cannot be unpacked, but unpacking was requested.'
+    )
   if unpack_required and not unpack_possible:
     raise TypeError(
-        'The supplied function "{}" with signature {} cannot accept a value of '
-        'type {} as either a single argument or multiple positional and/or '
-        'keyword arguments.'.format(fn.__name__, signature, parameter_type))
+        f'The supplied function "{fn.__name__}" with signature {signature} cannot accept a value of type {parameter_type} as either a single argument or multiple positional and/or keyword arguments.'
+    )
   if not unpack_required and unpack_possible and should_unpack is None:
     # The supplied function could accept a value as either a single argument,
     # or as multiple positional and/or keyword arguments, and the caller did
@@ -395,8 +381,8 @@ def _unpack_arg(arg_types, kwarg_types, arg) -> _Arguments:
     actual_type = type_conversions.infer_type(element_value)
     if not expected_type.is_assignable_from(actual_type):
       raise TypeError(
-          'Expected element at position {} to be of type {}, found {}.'.format(
-              idx, expected_type, actual_type))
+          f'Expected element at position {idx} to be of type {expected_type}, found {actual_type}.'
+      )
     if isinstance(element_value, structure.Struct):
       element_value = type_conversions.type_to_py_container(
           element_value, expected_type)
@@ -407,8 +393,8 @@ def _unpack_arg(arg_types, kwarg_types, arg) -> _Arguments:
     actual_type = type_conversions.infer_type(element_value)
     if not expected_type.is_assignable_from(actual_type):
       raise TypeError(
-          'Expected element named {} to be of type {}, found {}.'.format(
-              name, expected_type, actual_type))
+          f'Expected element named {name} to be of type {expected_type}, found {actual_type}.'
+      )
     if type_analysis.is_struct_with_py_container(element_value, expected_type):
       element_value = type_conversions.type_to_py_container(
           element_value, expected_type)
@@ -420,8 +406,8 @@ def _ensure_arg_type(parameter_type, arg) -> _Arguments:
   """Ensures that `arg` matches `parameter_type` before returning it."""
   arg_type = type_conversions.infer_type(arg)
   if not parameter_type.is_assignable_from(arg_type):
-    raise TypeError('Expected an argument of type {}, found {}.'.format(
-        parameter_type, arg_type))
+    raise TypeError(
+        f'Expected an argument of type {parameter_type}, found {arg_type}.')
   if type_analysis.is_struct_with_py_container(arg, parameter_type):
     arg = type_conversions.type_to_py_container(arg, parameter_type)
   return [arg], {}
@@ -539,9 +525,8 @@ class PolymorphicComputation(object):
                               'computation')
       if concrete_fn.type_signature.parameter != arg_type:
         raise TypeError(
-            'Expected a concrete function that takes parameter {}, got one '
-            'that takes {}.'.format(arg_type,
-                                    concrete_fn.type_signature.parameter))
+            f'Expected a concrete function that takes parameter {arg_type}, got one that takes {concrete_fn.type_signature.parameter}.'
+        )
       self._concrete_function_cache[key] = concrete_fn
     return concrete_fn
 

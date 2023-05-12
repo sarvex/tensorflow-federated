@@ -304,7 +304,7 @@ class ValueTest(parameterized.TestCase):
     x = value_impl.Value(building_blocks.Reference('foo', tf.int32))
     y = value_impl.Value(building_blocks.Reference('bar', tf.bool))
     v = value_impl.to_value(collections.namedtuple('_', 'a b')(x, y), None)
-    sliced_v = v[:int(len(v) / 2)]
+    sliced_v = v[:len(v) // 2]
     self.assertIsInstance(sliced_v, value_impl.Value)
     sliced_v = v[:4:2]
     self.assertEqual(str(sliced_v), '<foo>')

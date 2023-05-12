@@ -136,7 +136,7 @@ def _check_len(
 ):
   py_typecheck.check_type(length, int)
   if len(target) != length:
-    raise err_fn('Expected length of {}, found {}.'.format(length, len(target)))
+    raise err_fn(f'Expected length of {length}, found {len(target)}.')
 
 
 def _check_placement(
@@ -149,8 +149,8 @@ def _check_placement(
   py_typecheck.check_type(placement, placements.PlacementLiteral)
   if target.placement != placement:
     raise err_fn(
-        'Expected value with placement {}, found value of type {}.'.format(
-            placement, target))
+        f'Expected value with placement {placement}, found value of type {target}.'
+    )
 
 
 def _check_type_equal(
@@ -162,7 +162,7 @@ def _check_type_equal(
   py_typecheck.check_type(actual, computation_types.Type)
   py_typecheck.check_type(expected, computation_types.Type)
   if not actual.is_equivalent_to(expected):
-    raise err_fn('Expected type of {}, found {}.'.format(expected, actual))
+    raise err_fn(f'Expected type of {expected}, found {actual}.')
 
 
 def _check_type(
@@ -173,8 +173,7 @@ def _check_type(
 ):
   py_typecheck.check_type(type_spec, type)
   if not isinstance(target, type_spec):
-    raise err_fn('Expected type of {}, found {}.'.format(
-        type_spec, type(target)))
+    raise err_fn(f'Expected type of {type_spec}, found {type(target)}.')
 
 
 def _check_type_is_fn(
@@ -512,7 +511,7 @@ def _as_function_of_some_federated_subparameters(
     type_list.append(selected_type)
 
   placement = type_list[0].placement
-  if not all(x.placement is placement for x in type_list):
+  if any(x.placement is not placement for x in type_list):
     raise _MismatchedSelectionPlacementError(
         'In order to zip the argument to the lower-level lambda together, all '
         'selected arguments should be at the same placement. Your selections '
@@ -521,11 +520,11 @@ def _as_function_of_some_federated_subparameters(
   zip_type = computation_types.FederatedType([x.member for x in type_list],
                                              placement=placement)
   ref_to_zip = building_blocks.Reference(next(name_generator), zip_type)
-  path_to_replacement = {}
-  for i, path in enumerate(int_paths):
-    path_to_replacement[path] = _construct_selection_from_federated_tuple(
-        ref_to_zip, i, name_generator)
-
+  path_to_replacement = {
+      path: _construct_selection_from_federated_tuple(ref_to_zip, i,
+                                                      name_generator)
+      for i, path in enumerate(int_paths)
+  }
   new_lambda_body = _replace_selections(bb.result, bb.parameter_name,
                                         path_to_replacement)
   lambda_with_zipped_param = building_blocks.Lambda(ref_to_zip.name,
@@ -846,8 +845,7 @@ def get_broadcast_form_for_computation(
   bb = _replace_lambda_body_with_call_dominant_form(bb)
 
   tree_analysis.check_contains_only_reducible_intrinsics(bb)
-  aggregations = tree_analysis.find_aggregations_in_tree(bb)
-  if aggregations:
+  if aggregations := tree_analysis.find_aggregations_in_tree(bb):
     raise ValueError(
         f'`get_broadcast_form_for_computation` called with computation '
         f'containing {len(aggregations)} aggregations, but broadcast form '

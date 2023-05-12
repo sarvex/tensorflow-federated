@@ -41,7 +41,7 @@ from tensorflow_federated.python.core.impl.types import placements
 
 def create_remote_executor():
   port = portpicker.pick_unused_port()
-  channel = grpc.insecure_channel('localhost:{}'.format(port))
+  channel = grpc.insecure_channel(f'localhost:{port}')
   return remote_executor.RemoteExecutor(channel)
 
 

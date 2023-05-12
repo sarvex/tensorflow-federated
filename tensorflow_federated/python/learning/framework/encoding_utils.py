@@ -235,7 +235,7 @@ def _build_tf_computations_for_gather(state_type, value_type, encoders):
     return part_decoded_x, one
 
   # ...however, result type is needed to build the subsequent tf_compuations.
-  @computations.tf_computation(encode_fn.type_signature.result[0:2])
+  @computations.tf_computation(encode_fn.type_signature.result[:2])
   def tmp_decode_before_sum_fn(encoded_x, decode_before_sum_params):
     return decode_before_sum_tf_function(encoded_x, decode_before_sum_params)
 
@@ -313,8 +313,7 @@ def _validate_encoder(encoder, value, encoder_type):
       tensor_encoding.core.SimpleEncoder, tensor_encoding.core.GatherEncoder
   ]
   if not isinstance(encoder, encoder_type):
-    raise TypeError('Provided encoder must be an instance of %s.' %
-                    encoder_type)
+    raise TypeError(f'Provided encoder must be an instance of {encoder_type}.')
   if not encoder.input_tensorspec.is_compatible_with(
       tf.TensorSpec(value.shape, value.dtype)):
     raise TypeError('Provided encoder and value are not compatible.')
@@ -353,7 +352,7 @@ def _accmulate_state_update_tensor(a, b, mode):
     raise NotImplementedError(
         'StateAggregationMode.STACK is not supported yet.')
   else:
-    raise ValueError('Not supported state aggregation mode: %s' % mode)
+    raise ValueError(f'Not supported state aggregation mode: {mode}')
 
 
 def _accumulator_value(values, state_update_tensors):

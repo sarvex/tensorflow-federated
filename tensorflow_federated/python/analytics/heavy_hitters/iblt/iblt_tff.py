@@ -120,12 +120,12 @@ def build_iblt_computation(
         f'got {max_words_per_user}')
   if k_anonymity < 1:
     raise ValueError(f'k_anonymity must be at least 1, got {k_anonymity}')
-  if secure_sum_bitwidth is not None:
-    if not isinstance(secure_sum_bitwidth, int) or (secure_sum_bitwidth <= 0 or
-                                                    secure_sum_bitwidth > 62):
-      raise ValueError(
-          'If set, secure_sum_bitwidth requires an integer in the range [1,62],'
-          f' got {secure_sum_bitwidth}')
+  if secure_sum_bitwidth is not None and (
+      not isinstance(secure_sum_bitwidth, int) or
+      (secure_sum_bitwidth <= 0 or secure_sum_bitwidth > 62)):
+    raise ValueError(
+        'If set, secure_sum_bitwidth requires an integer in the range [1,62],'
+        f' got {secure_sum_bitwidth}')
   if batch_size < 1:
     raise ValueError(f'batch_size must be at least 1, got {batch_size}')
 

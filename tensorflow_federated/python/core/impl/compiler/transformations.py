@@ -153,7 +153,9 @@ def transform_to_local_call_dominant(
   global_comp = comp
   name_generator = building_block_factory.unique_name_generator(comp)
 
-  class _Scope():
+
+
+  class _Scope:
     """Name resolution scopes which track the creation of new value bindings."""
 
     def __init__(self, parent=None, bind_to_parent=False):
@@ -187,12 +189,11 @@ def transform_to_local_call_dominant(
       """Add a binding to the nearest binding scope."""
       if self._newly_bound_values is None:
         return self._parent.create_binding(value)
-      else:
-        name = next(name_generator)
-        self._newly_bound_values.append((name, value))
-        reference = building_blocks.Reference(name, value.type_signature)
-        self._locals[name] = reference
-        return reference
+      name = next(name_generator)
+      self._newly_bound_values.append((name, value))
+      reference = building_blocks.Reference(name, value.type_signature)
+      self._locals[name] = reference
+      return reference
 
     def new_child(self):
       return _Scope(parent=self, bind_to_parent=True)
@@ -209,6 +210,7 @@ def transform_to_local_call_dominant(
         return result
       else:
         return building_blocks.Block(self._newly_bound_values, result)
+
 
   def _build(comp, scope):
     """Transforms `comp` to CDF, possibly adding bindings to `scope`."""
@@ -319,9 +321,8 @@ def construct_tensorflow_calling_lambda_on_concrete_arg(
 
   encapsulating_lambda = _generate_simple_tensorflow(
       building_blocks.Lambda(parameter.name, parameter.type_signature, body))
-  comp_called = _generate_simple_tensorflow(
+  return _generate_simple_tensorflow(
       building_blocks.Call(encapsulating_lambda, concrete_arg))
-  return comp_called
 
 
 def _replace_references_in_comp_with_selections_from_arg(
@@ -380,9 +381,8 @@ def _construct_tensorflow_representing_single_local_assignment(
   ]
   return_tuple = building_blocks.Struct(pass_through_args + vals_replaced)
 
-  comp_called = construct_tensorflow_calling_lambda_on_concrete_arg(
+  return construct_tensorflow_calling_lambda_on_concrete_arg(
       arg_ref, return_tuple, previous_output)
-  return comp_called
 
 
 def _get_unbound_ref(block):
@@ -760,27 +760,24 @@ class TensorFlowGenerator(transformation_utils.TransformSpec):
     return generated_tf, True
 
   def should_transform(self, comp):
-    if not (type_analysis.is_tensorflow_compatible_type(comp.type_signature) or
-            (comp.type_signature.is_function() and
-             type_analysis.is_tensorflow_compatible_type(
-                 comp.type_signature.parameter) and
-             type_analysis.is_tensorflow_compatible_type(
-                 comp.type_signature.result))):
+    if not type_analysis.is_tensorflow_compatible_type(comp.type_signature) and (
+        not comp.type_signature.is_function()
+        or not type_analysis.is_tensorflow_compatible_type(
+            comp.type_signature.parameter)
+        or not type_analysis.is_tensorflow_compatible_type(
+            comp.type_signature.result)):
       return False
     elif comp.is_compiled_computation() or (
         comp.is_call() and comp.function.is_compiled_computation()):
       # These represent the final result of TF generation; no need to transform.
       return False
-    unbound_refs = transformation_utils.get_map_of_unbound_references(
-        comp)[comp]
-    if unbound_refs:
+    if unbound_refs := transformation_utils.get_map_of_unbound_references(
+        comp)[comp]:
       # We cannot represent these captures without further information.
       return False
-    if tree_analysis.contains_types(
-        comp, building_blocks.Intrinsic) or tree_analysis.contains_types(
-            comp, building_blocks.Data):
-      return False
-    return True
+    return not tree_analysis.contains_types(
+        comp, building_blocks.Intrinsic) and not tree_analysis.contains_types(
+            comp, building_blocks.Data)
 
 
 def compile_local_computations_to_tensorflow(comp):
@@ -1099,8 +1096,7 @@ def _compute_intrinsic_dependencies(
             'Cannot force-align intrinsics:\n'
             f'Call to intrinsic `{local_value.function.uri}` depends '
             f'on calls to intrinsics:\n`{intrinsic_dependencies}`.')
-      intrinsic_dependencies_for_ref[local_name] = set(
-          [local_value.function.uri])
+      intrinsic_dependencies_for_ref[local_name] = {local_value.function.uri}
       result.uri_to_locals[local_value.function.uri].append(
           (local_name, local_value))
     else:
@@ -1145,15 +1141,7 @@ def _compute_merged_intrinsics(
   results = []
   for default_call in intrinsic_defaults:
     uri = default_call.function.uri
-    locals_for_uri = uri_to_locals[uri]
-    if not locals_for_uri:
-      results.append(
-          _MergedIntrinsic(
-              uri=uri,
-              args=default_call.argument,
-              return_type=default_call.type_signature,
-              unpack_to_locals=[]))
-    else:
+    if locals_for_uri := uri_to_locals[uri]:
       calls = [local[1] for local in locals_for_uri]
       result_placement = calls[0].type_signature.placement
       result_all_equal = calls[0].type_signature.all_equal
@@ -1181,6 +1169,13 @@ def _compute_merged_intrinsics(
               return_type=return_type,
               unpack_to_locals=[name for (name, _) in locals_for_uri],
           ))
+    else:
+      results.append(
+          _MergedIntrinsic(
+              uri=uri,
+              args=default_call.argument,
+              return_type=default_call.type_signature,
+              unpack_to_locals=[]))
   return results
 
 
@@ -1233,7 +1228,7 @@ def _merge_args(
     param_name = next(name_generator)
     if abstract_parameter_type.parameter.is_struct():
       num_args = len(abstract_parameter_type.parameter)
-      parameter_types = [[] for i in range(num_args)]
+      parameter_types = [[] for _ in range(num_args)]
       for arg in args:
         for i in range(num_args):
           parameter_types[i].append(arg.type_signature.parameter[i])
@@ -1241,11 +1236,11 @@ def _merge_args(
       param_ref = building_blocks.Reference(param_name, param_type)
       calls = []
       for (n, fn) in enumerate(args):
-        args_to_fn = []
-        for i in range(num_args):
-          args_to_fn.append(
-              building_blocks.Selection(
-                  building_blocks.Selection(param_ref, index=i), index=n))
+        args_to_fn = [
+            building_blocks.Selection(building_blocks.Selection(param_ref,
+                                                                index=i),
+                                      index=n) for i in range(num_args)
+        ]
         calls.append(
             building_blocks.Call(
                 fn,
@@ -1408,7 +1403,7 @@ def force_align_and_split_by_intrinsics(
 
   name_generator = building_block_factory.unique_name_generator(comp)
 
-  intrinsic_uris = set(call.function.uri for call in intrinsic_defaults)
+  intrinsic_uris = {call.function.uri for call in intrinsic_defaults}
   deps = _compute_intrinsic_dependencies(intrinsic_uris, comp.parameter_name,
                                          comp.result.locals, comp_repr)
   merged_intrinsics = _compute_merged_intrinsics(intrinsic_defaults,

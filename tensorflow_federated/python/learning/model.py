@@ -112,7 +112,6 @@ class Model(object, metaclass=abc.ABCMeta):
 
     Similar in spirit to `tf.keras.models.Model.input_spec`.
     """.format(MODEL_ARG_NAME, MODEL_LABEL_NAME)
-    pass
 
   @abc.abstractmethod
   def forward_pass(self, batch_input, training=True) -> BatchOutput:

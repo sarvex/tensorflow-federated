@@ -451,11 +451,11 @@ class FederatingExecutorCreateCallTest(executor_test_utils.AsyncTestCase,
     self.assertEqual(result.type_signature.compact_representation(),
                      comp_type.result.compact_representation())
     actual_result = self.run_sync(result.compute())
-    unique_results = set([x.numpy() for x in actual_result])
+    unique_results = {x.numpy() for x in actual_result}
     if len(actual_result) != len(unique_results):
       self.fail(
-          'Expected the result to contain different random numbers, found {}.'
-          .format(actual_result))
+          f'Expected the result to contain different random numbers, found {actual_result}.'
+      )
 
   # pyformat: disable
   @parameterized.named_parameters([

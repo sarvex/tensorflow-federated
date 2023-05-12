@@ -135,10 +135,9 @@ class ClippingSumFactoryExecutionTest(test_case.TestCase,
   def test_sub_sample_clip_factory(self, value_shape, max_records_per_user,
                                    num_clients):
 
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     clip_factory = clipping_factory.HistogramClippingSumFactory(
         clip_mechanism='sub-sampling',
         max_records_per_user=max_records_per_user)
@@ -164,10 +163,9 @@ class ClippingSumFactoryExecutionTest(test_case.TestCase,
   def test_distinct_clip_factory(self, value_shape, max_records_per_user,
                                  num_clients):
 
-    client_records = []
-    for _ in range(num_clients):
-      client_records.append(np.arange(value_shape, dtype=int).tolist())
-
+    client_records = [
+        np.arange(value_shape, dtype=int).tolist() for _ in range(num_clients)
+    ]
     clip_factory = clipping_factory.HistogramClippingSumFactory(
         clip_mechanism='distinct', max_records_per_user=max_records_per_user)
 

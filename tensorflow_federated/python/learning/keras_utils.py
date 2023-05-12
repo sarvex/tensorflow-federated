@@ -115,11 +115,9 @@ def from_keras_model(
     loss_weights = [1.0]
   else:
     if len(loss) != len(keras_model.outputs):
-      raise ValueError('If a loss list is provided, `keras_model` must have '
-                       'equal number of outputs to the losses.\nloss: {}\nof '
-                       'length: {}.\noutputs: {}\nof length: {}.'.format(
-                           loss, len(loss), keras_model.outputs,
-                           len(keras_model.outputs)))
+      raise ValueError(
+          f'If a loss list is provided, `keras_model` must have equal number of outputs to the losses.\nloss: {loss}\nof length: {len(loss)}.\noutputs: {keras_model.outputs}\nof length: {len(keras_model.outputs)}.'
+      )
     for loss_fn in loss:
       py_typecheck.check_type(loss_fn, tf.keras.losses.Loss)
 
@@ -128,24 +126,20 @@ def from_keras_model(
     else:
       if len(loss) != len(loss_weights):
         raise ValueError(
-            '`keras_model` must have equal number of losses and loss_weights.'
-            '\nloss: {}\nof length: {}.'
-            '\nloss_weights: {}\nof length: {}.'.format(loss, len(loss),
-                                                        loss_weights,
-                                                        len(loss_weights)))
+            f'`keras_model` must have equal number of losses and loss_weights.\nloss: {loss}\nof length: {len(loss)}.\nloss_weights: {loss_weights}\nof length: {len(loss_weights)}.'
+        )
       for loss_weight in loss_weights:
         py_typecheck.check_type(loss_weight, float)
 
   if len(input_spec) != 2:
-    raise ValueError('The top-level structure in `input_spec` must contain '
-                     'exactly two top-level elements, as it must specify type '
-                     'information for both inputs to and predictions from the '
-                     'model. You passed input spec {}.'.format(input_spec))
+    raise ValueError(
+        f'The top-level structure in `input_spec` must contain exactly two top-level elements, as it must specify type information for both inputs to and predictions from the model. You passed input spec {input_spec}.'
+    )
   if isinstance(input_spec, computation_types.Type):
     if not type_analysis.is_structure_of_tensors(input_spec):
       raise TypeError(
-          'Expected a `tff.Type` with all the leaf nodes being '
-          '`tff.TensorType`s, found an input spec {}.'.format(input_spec))
+          f'Expected a `tff.Type` with all the leaf nodes being `tff.TensorType`s, found an input spec {input_spec}.'
+      )
     input_spec = type_conversions.structure_from_tensor_type_tree(
         lambda tensor_type: tf.TensorSpec(tensor_type.shape, tensor_type.dtype),
         input_spec)
@@ -157,15 +151,12 @@ def from_keras_model(
   if isinstance(input_spec, collections.abc.Mapping):
     if model_lib.MODEL_ARG_NAME not in input_spec:
       raise ValueError(
-          'The `input_spec` is a collections.abc.Mapping (e.g., a dict), so it '
-          'must contain an entry with key `\'{}\'`, representing the input(s) '
-          'to the Keras model.'.format(model_lib.MODEL_ARG_NAME))
+          f"The `input_spec` is a collections.abc.Mapping (e.g., a dict), so it must contain an entry with key `\'{model_lib.MODEL_ARG_NAME}\'`, representing the input(s) to the Keras model."
+      )
     if model_lib.MODEL_LABEL_NAME not in input_spec:
       raise ValueError(
-          'The `input_spec` is a collections.abc.Mapping (e.g., a dict), so it '
-          'must contain an entry with key `\'{}\'`, representing the label(s) '
-          'to be used in the Keras loss(es).'.format(
-              model_lib.MODEL_LABEL_NAME))
+          f"The `input_spec` is a collections.abc.Mapping (e.g., a dict), so it must contain an entry with key `\'{model_lib.MODEL_LABEL_NAME}\'`, representing the label(s) to be used in the Keras loss(es)."
+      )
 
   if metrics is None:
     metrics = []

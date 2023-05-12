@@ -36,9 +36,9 @@ def check_type(target, type_spec, label=None):
     TypeError: when the target is not of one of the types in `type_spec`.
   """
   if not isinstance(target, type_spec):
-    raise TypeError('Expected {}{}, found {}.'.format(
-        '{} to be of type '.format(label) if label is not None else '',
-        type_string(type_spec), type_string(type(target))))
+    raise TypeError(
+        f"Expected {f'{label} to be of type ' if label is not None else ''}{type_string(type_spec)}, found {type_string(type(target))}."
+    )
   return target
 
 
@@ -54,9 +54,9 @@ def check_none(target, label=None):
     TypeError: when the target is not `None`.
   """
   if target is not None:
-    raise TypeError('Expected {} to be `None`, found {}.'.format(
-        label if label is not None else 'the argument',
-        type_string(type(target))))
+    raise TypeError(
+        f"Expected {label if label is not None else 'the argument'} to be `None`, found {type_string(type(target))}."
+    )
 
 
 def check_not_none(target, label=None):
@@ -71,8 +71,9 @@ def check_not_none(target, label=None):
     TypeError: when the target is `None`.
   """
   if target is None:
-    raise TypeError('Expected {} to not be `None`.'.format(
-        label if label is not None else 'the argument'))
+    raise TypeError(
+        f"Expected {label if label is not None else 'the argument'} to not be `None`."
+    )
 
 
 def check_subclass(target_class, parent_class):
@@ -89,17 +90,18 @@ def check_subclass(target_class, parent_class):
     TypeError if the `target_class` doesn't subclass a class in `parent_class`.
   """
   if not issubclass(target_class, parent_class):
-    raise TypeError('Expected {} to subclass {}, but it does not.'.format(
-        target_class, parent_class))
+    raise TypeError(
+        f'Expected {target_class} to subclass {parent_class}, but it does not.'
+    )
   return target_class
 
 
 def check_callable(target, label=None):
   """Checks target is callable and then returns it."""
   if not callable(target):
-    raise TypeError('Expected {} callable, found non-callable {}.'.format(
-        '{} to be'.format(label) if label is not None else 'a',
-        type_string(type(target))))
+    raise TypeError(
+        f"Expected {f'{label} to be' if label is not None else 'a'} callable, found non-callable {type_string(type(target))}."
+    )
   return target
 
 
@@ -117,19 +119,16 @@ def type_string(type_spec):
     TypeError: if the `type_spec` is not of the right type.
   """
   if isinstance(type_spec, type):
-    if type_spec.__module__ == builtins.__name__:
-      return type_spec.__name__
-    else:
-      return '{}.{}'.format(type_spec.__module__, type_spec.__name__)
+    return (type_spec.__name__ if type_spec.__module__ == builtins.__name__
+            else f'{type_spec.__module__}.{type_spec.__name__}')
+  assert isinstance(type_spec, (tuple, list))
+  type_names = [type_string(x) for x in type_spec]
+  if len(type_names) == 1:
+    return type_names[0]
+  elif len(type_names) == 2:
+    return '{} or {}'.format(*type_names)
   else:
-    assert isinstance(type_spec, (tuple, list))
-    type_names = [type_string(x) for x in type_spec]
-    if len(type_names) == 1:
-      return type_names[0]
-    elif len(type_names) == 2:
-      return '{} or {}'.format(*type_names)
-    else:
-      return ', '.join(type_names[0:-1] + ['or {}'.format(type_names[-1])])
+    return ', '.join(type_names[:-1] + [f'or {type_names[-1]}'])
 
 
 def is_attrs(value):
@@ -179,9 +178,7 @@ def is_name_value_pair(element, name_required=True, value_type=None):
   if ((name_required or element[0] is not None) and
       not isinstance(element[0], str)):
     return False
-  if value_type is not None and not isinstance(element[1], value_type):
-    return False
-  return True
+  return value_type is None or isinstance(element[1], value_type)
 
 
 def check_len(target, length):
@@ -196,8 +193,8 @@ def check_len(target, length):
   """
   if len(target) != length:
     raise ValueError(
-        'Expected an argument of length {}, got one of length {} ({}).'.format(
-            length, len(target), target))
+        f'Expected an argument of length {length}, got one of length {len(target)} ({target}).'
+    )
 
 
 def check_non_negative_float(target, label=None):
